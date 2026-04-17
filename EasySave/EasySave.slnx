@@ -1,1 +1,4 @@
-<Solution />
+<Solution>
+  <Project Path="EasyLog/EasyLog.csproj" Id="1dcdb33f-2fc3-43c9-9ded-665de34d3976" />
+  <Project Path="EasySave/EasySave.csproj" Id="802931ec-e099-4c59-b2a9-37ac3e56e26b" />
+</Solution>
