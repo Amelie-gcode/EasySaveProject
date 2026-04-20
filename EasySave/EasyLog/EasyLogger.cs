@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EasyLog
 {
-    public class Class1
+    public class EasyLogger
     {
     }
 }
