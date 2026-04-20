@@ -1,19 +1,23 @@
 ```mermaid
 classDiagram
-    %% Namespaces grouping for logical separation
+    %% --- MAIN ENTRY POINT ---
     namespace EasySave_Main {
         class Program {
             + static Main(string[] args)
         }
     }
+
+    %% --- VIEWS (MVVM) ---
     namespace EasySave_Views {
         class ConsoleView {
             - MainViewModel _viewModel
+            + ConsoleView(MainViewModel vm)
             + DisplayMenu()
             + ReadUserInput()
         }
     }
 
+    %% --- VIEWMODELS (MVVM) ---
     namespace EasySave_ViewModels {
         class MainViewModel {
             - BackupManager _backupManager
@@ -21,12 +25,21 @@ classDiagram
             + string CurrentLanguage
             + List~BackupJob~ Jobs
             + ExecuteJobCommand(int id)
+            + ExecuteJobsFromCommandLine(string arguments)
             + ChangeLanguageCommand(string langCode)
-            + OnJobProgressUpdated(sender, args)
         }
     }
 
+    %% --- MODELS (CORE BUSINESS LOGIC) ---
     namespace EasySave_Models {
+        class JobState {
+            <<enumeration>>
+            Inactive
+            Active
+            Completed
+            Error
+        }
+
         class BackupManager {
             - List~BackupJob~ _jobs
             - StateManager _stateManager
@@ -40,13 +53,16 @@ classDiagram
             + string SourcePath
             + string TargetPath
             + JobState State
+            - IBackupStrategy _strategy
             + event EventHandler ProgressUpdated
             + Execute()
+            - NotifyProgress()
         }
 
         class StateManager {
             - string _stateFilePath
             + OnJobProgressUpdated(sender, args)
+            - WriteToJson(data)
         }
 
         class LocalizationManager {
@@ -62,10 +78,17 @@ classDiagram
             <<Interface>>
             + ExecuteBackup(string source, string target)
         }
-        class FullBackupStrategy
-        class DifferentialBackupStrategy
+        
+        class FullBackupStrategy {
+            + ExecuteBackup(string source, string target)
+        }
+        
+        class DifferentialBackupStrategy {
+            + ExecuteBackup(string source, string target)
+        }
     }
 
+    %% --- REQUIRED DLL ---
     namespace EasyLog_DLL {
         class EasyLogger {
             <<Singleton>>
@@ -75,6 +98,7 @@ classDiagram
         }
     }
 
+    %% --- UNIT TESTING ---
     namespace EasySave_Tests {
         class BackupJobTests {
             + Test_FullBackup_Success()
@@ -85,21 +109,31 @@ classDiagram
         }
     }
 
-    %% Relationships
+    %% --- RELATIONSHIPS & DEPENDENCIES ---
+    
+    %% Bootstrapping
+    Program --> ConsoleView : Instantiates & Starts
+    Program --> MainViewModel : Instantiates
+    
+    %% MVVM Bindings
     ConsoleView --> MainViewModel : Binds to / Interacts
     MainViewModel --> BackupManager : Invokes commands
     MainViewModel --> LocalizationManager : Requests text
-    MainViewModel ..> BackupJob : Observes progress
-
+    MainViewModel ..> BackupJob : Observes progress (via Events)
+    
+    %% Core Model Composition
     BackupManager "1" *-- "1" StateManager : Instantiates
     BackupManager "1" *-- "0..5" BackupJob : Manages
+    
+    %% Strategy Pattern
     BackupJob o-- IBackupStrategy : Uses
     IBackupStrategy <|.. FullBackupStrategy : Implements
     IBackupStrategy <|.. DifferentialBackupStrategy : Implements
     
-    BackupJob ..> StateManager : Triggers updates
+    %% State Tracking & Observer Pattern
+    BackupJob --> JobState : Uses
+    BackupJob ..> StateManager : Triggers event (decoupled)
+    
+    %% Logging (Singleton)
     BackupJob ..> EasyLogger : Sends log data
-
-    Program --> ConsoleView : Instantiates & Starts
-    Program --> MainViewModel : Instantiates
 ```
