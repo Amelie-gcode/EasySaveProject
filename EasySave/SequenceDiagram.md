@@ -1,3 +1,4 @@
+```mermaid
 sequenceDiagram
     autonumber
     actor User
@@ -81,3 +82,4 @@ sequenceDiagram
     
     Engine-->>User: Execution Finished
     deactivate Engine
+```

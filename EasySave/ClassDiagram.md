@@ -1,3 +1,4 @@
+```mermaid
 classDiagram
 %% ==============================
 %% INTERFACES & ABSTRACTIONS
@@ -129,3 +130,4 @@ class SequentialEngine {
 
 IBackupEngine <|.. SequentialEngine
 IBackupEngine o-- IRenderer : Controls
+```
