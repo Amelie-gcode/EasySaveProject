@@ -1,85 +1,42 @@
 ```mermaid
 sequenceDiagram
-    autonumber
     actor User
-    participant Engine as SequentialEngine
-    participant Render as ConsoleRenderer
-    participant BM as BackupManager
+    participant View as ConsoleView
+    participant VM as MainViewModel
+    participant Manager as BackupManager
     participant Job as BackupJob
-    participant Strat as FullBackupStrategy
-    participant Obs as RealTimeStateObserver
-    participant Log as EasyLogDllAdapter
+    participant Strategy as IBackupStrategy(Full/Diff)
+    participant State as StateManager
+    participant Logger as EasyLog.dll (EasyLogger)
 
-    User->>Engine: Start(args e.g., "1")
-    activate Engine
+    User->>View: Enters command (e.g., "EasySave.exe 1")
+    View->>VM: ExecuteJobCommand(1)
+    VM->>Manager: ExecuteJob(1)
+    Manager->>Job: Execute()
     
-    %% Engine Initialization Phase
-    Engine->>Render: Render() (Initial UI State)
-    activate Render
-    Render->>BM: GetJobs() (Read state)
-    BM-->>Render: List of Jobs
-    Render-->>Engine: Console Updated
-    deactivate Render
-
-    Engine->>Engine: ParseArguments("1")
+    Job->>State: UpdateState (Status: Active)
     
-    %% Execution Phase
-    Engine->>BM: ExecuteJob(1)
-    activate BM
-    BM->>Job: Execute()
-    activate Job
+    Job->>Strategy: ExecuteBackup(SourcePath, TargetPath)
     
-    %% Observer Notification (Start)
-    Job->>Obs: Notify(Status: Active)
-    activate Obs
-    Obs->>Obs: Write to state.json
-    Obs-->>Job: 
-    deactivate Obs
-    
-    %% Strategy & Bridge Pattern in Action
-    Job->>Strat: Execute(source, target, type)
-    activate Strat
-    
-    loop For each file in Source
-        Strat->>Strat: Copy File
-        Strat->>Job: Update Progress Data
+    loop For each file
+        Strategy-->>Job: File processed event
+        Job->>Job: NotifyProgress()
         
-        Job->>Obs: Notify(Progress %)
-        activate Obs
-        Obs->>Obs: Update state.json
-        Obs-->>Job: 
-        deactivate Obs
+        %% Observer pattern in action
+        Job-->>VM: ProgressUpdated Event
+        VM-->>View: Update Console output
+        Job-->>State: ProgressUpdated Event
+        State->>State: Write to state.json
         
-        Job->>Log: WriteLog(LogEntry)
-        activate Log
-        Log->>Log: Write to daily_log.json (via EasyLog.dll)
-        Log-->>Job: 
-        deactivate Log
+        %% Logging pattern
+        Job->>Logger: WriteLog(FileTransferData)
+        Logger->>Logger: Append to YYYY-MM-DD.json
     end
     
-    Strat-->>Job: Strategy Completed
-    deactivate Strat
-    
-    %% Observer Notification (End)
-    Job->>Obs: Notify(Status: Inactive)
-    activate Obs
-    Obs->>Obs: Update state.json
-    Obs-->>Job: 
-    deactivate Obs
-    
-    Job-->>BM: Return Success
-    deactivate Job
-    BM-->>Engine: Job 1 Completed
-    deactivate BM
-    
-    %% Final UI Update
-    Engine->>Render: Render() (Final UI State)
-    activate Render
-    Render->>BM: GetJobs() (Read state)
-    BM-->>Render: Updated List
-    Render-->>Engine: Console Updated
-    deactivate Render
-    
-    Engine-->>User: Execution Finished
-    deactivate Engine
+    Strategy-->>Job: Backup Complete
+    Job->>State: UpdateState (Status: Inactive)
+    Job-->>Manager: Execution Finished
+    Manager-->>VM: Task Completed
+    VM-->>View: Display completion message (Localized)
+    View-->>User: "Backup Finished"
 ```

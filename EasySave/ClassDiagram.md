@@ -1,133 +1,105 @@
 ```mermaid
 classDiagram
-%% ==============================
-%% INTERFACES & ABSTRACTIONS
-%% ==============================
-class IBackupJob {
-    <<interface>>
-    +string Name
-    +Execute()
-}
+    %% Namespaces grouping for logical separation
+    namespace EasySave_Main {
+        class Program {
+            + static Main(string[] args)
+        }
+    }
+    namespace EasySave_Views {
+        class ConsoleView {
+            - MainViewModel _viewModel
+            + DisplayMenu()
+            + ReadUserInput()
+        }
+    }
 
-class IBackupStrategy {
-    <<interface>>
-    +Execute(string source, string target, IStateSubject state)
-}
+    namespace EasySave_ViewModels {
+        class MainViewModel {
+            - BackupManager _backupManager
+            - LocalizationManager _localization
+            + string CurrentLanguage
+            + List~BackupJob~ Jobs
+            + ExecuteJobCommand(int id)
+            + ChangeLanguageCommand(string langCode)
+            + OnJobProgressUpdated(sender, args)
+        }
+    }
 
-%% BRIDGE PATTERN: Logger Abstraction
-class LoggerBase {
-    <<abstract>>
-    #ILogger implementor
-    +Log(LogEntry entry)*
-}
+    namespace EasySave_Models {
+        class BackupManager {
+            - List~BackupJob~ _jobs
+            - StateManager _stateManager
+            + CreateJob(name, source, target, type)
+            + ExecuteJob(int id)
+            + ExecuteAll()
+        }
 
-class ILogger {
-    <<interface>>
-    +WriteLog(LogEntry entry)
-}
+        class BackupJob {
+            + string Name
+            + string SourcePath
+            + string TargetPath
+            + JobState State
+            + event EventHandler ProgressUpdated
+            + Execute()
+        }
 
-%% ==============================
-%% CORE IMPLEMENTATION
-%% ==============================
-class BackupJob {
-    -IBackupStrategy _strategy
-    -LoggerBase _logger
-    -IStateSubject _stateSubject
-    +string Name
-    +string SourcePath
-    +string TargetPath
-    +Execute()
-}
-IBackupJob <|.. BackupJob
+        class StateManager {
+            - string _stateFilePath
+            + OnJobProgressUpdated(sender, args)
+        }
 
-class FullBackupStrategy { +Execute() }
-class DifferentialBackupStrategy { +Execute() }
-IBackupStrategy <|.. FullBackupStrategy
-IBackupStrategy <|.. DifferentialBackupStrategy
-BackupJob --> IBackupStrategy
+        class LocalizationManager {
+            <<Singleton>>
+            - string _currentLanguage
+            - Dictionary _translations
+            + static Instance
+            + SetLanguage(string langCode)
+            + GetString(string key) : string
+        }
 
-class DailyFileLogger { +WriteLog() }
-class EasyLogDllAdapter { +WriteLog() }
-ILogger <|.. DailyFileLogger
-ILogger <|.. EasyLogDllAdapter
-LoggerBase o-- ILogger : Bridge
-BackupJob --> LoggerBase
+        class IBackupStrategy {
+            <<Interface>>
+            + ExecuteBackup(string source, string target)
+        }
+        class FullBackupStrategy
+        class DifferentialBackupStrategy
+    }
 
-%% ==============================
-%% PATTERNS: SINGLETON & FACTORY
-%% ==============================
-class BackupManager {
-    -static BackupManager _instance
-    -List~IBackupJob~ _jobs
-    +static GetInstance() BackupManager
-    +AddJob(IBackupJob job)
-    +ExecuteJob(int id)
-    +ExecuteAll()
-}
+    namespace EasyLog_DLL {
+        class EasyLogger {
+            <<Singleton>>
+            - string _logDirectory
+            + static Instance
+            + WriteLog(logEntry)
+        }
+    }
 
-class BackupFactory {
-    +CreateJob(string name, string src, string dest, string type) IBackupJob
-}
+    namespace EasySave_Tests {
+        class BackupJobTests {
+            + Test_FullBackup_Success()
+            + Test_DifferentialBackup_IgnoresUnchanged()
+        }
+        class LoggerTests {
+            + Test_SingletonInstance()
+        }
+    }
 
-BackupManager "1" *-- "0..5" IBackupJob : Composition
-BackupFactory ..> IBackupJob : Creates
+    %% Relationships
+    ConsoleView --> MainViewModel : Binds to / Interacts
+    MainViewModel --> BackupManager : Invokes commands
+    MainViewModel --> LocalizationManager : Requests text
+    MainViewModel ..> BackupJob : Observes progress
 
-%% ==============================
-%% OBSERVER PATTERN
-%% ==============================
-class IStateSubject {
-    <<interface>>
-    +Attach(IStateObserver o)
-    +Notify()
-}
+    BackupManager "1" *-- "1" StateManager : Instantiates
+    BackupManager "1" *-- "0..5" BackupJob : Manages
+    BackupJob o-- IBackupStrategy : Uses
+    IBackupStrategy <|.. FullBackupStrategy : Implements
+    IBackupStrategy <|.. DifferentialBackupStrategy : Implements
+    
+    BackupJob ..> StateManager : Triggers updates
+    BackupJob ..> EasyLogger : Sends log data
 
-class IStateObserver {
-    <<interface>>
-    +Update(BackupState state)
-}
-
-class RealTimeStateObserver { +Update() }
-IStateObserver <|.. RealTimeStateObserver
-IStateSubject <|.. BackupJob
-BackupJob "1" --o "n" IStateObserver : Notifies
-
-%% ==============================
-%% RENDERER (UI Display)
-%% ==============================
-class IRenderer {
-    <<interface>>
-    +BackupManager Manager
-    +Render()
-}
-
-class ConsoleRenderer {
-    +ConsoleRenderer(BackupManager manager)
-    +Render()
-}
-
-IRenderer <|.. ConsoleRenderer
-IRenderer --> BackupManager : Fetches data from
-
-%% ==============================
-%% ENGINE (Execution Flow)
-%% ==============================
-class IBackupEngine {
-    <<interface>>
-    +IRenderer Renderer
-    +Init()
-    +Start()
-    +Stop()
-}
-
-class SequentialEngine {
-    -Thread _thread
-    +int TickDelay
-    +SequentialEngine(IRenderer renderer)
-    +Init()
-    +Start()
-    +Stop()
-}
-
-IBackupEngine <|.. SequentialEngine
-IBackupEngine o-- IRenderer : Controls
+    Program --> ConsoleView : Instantiates & Starts
+    Program --> MainViewModel : Instantiates
 ```
