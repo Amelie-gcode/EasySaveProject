@@ -1,8 +1,4 @@
 <Solution>
-  <Folder Name="/UMLDiagrams/">
-    <File Path="ClassDiagram.md" />
-    <File Path="SequenceDiagram.md" />
-  </Folder>
   <Project Path="EasyLog/EasyLog.csproj" Id="2965a659-eeae-438b-bac6-d1cbf8e993e1" />
   <Project Path="EasySave/EasySave.csproj" Id="cece7f51-d970-4126-8ff0-58054db7042b" />
 </Solution>
