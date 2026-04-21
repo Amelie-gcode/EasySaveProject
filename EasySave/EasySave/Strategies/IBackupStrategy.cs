@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EasySave.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,7 +10,7 @@ namespace EasySave.Strategies
         /// strategy without knowing its details.
         public interface IBackupStrategy
         {
-            void ExecuteBackup(string source, string target);
+            void ExecuteBackup(string source, string target, BackupJob job);
         }
 }
 
