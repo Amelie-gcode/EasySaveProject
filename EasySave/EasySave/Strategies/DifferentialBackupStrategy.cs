@@ -1,36 +1,81 @@
-﻿using System;
+﻿using EasyLog;
+using EasySave.Models;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace EasySave.Strategies
 {
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        public void ExecuteBackup(string source, string target)
+        public void ExecuteBackup(string sourceDir, string targetDir, BackupJob jobContext)
         {
-            Directory.CreateDirectory(target);
+            string[] files = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories);
 
-            foreach (string sourceFile in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
+            foreach (string sourceFile in files)
             {
-                string relativePath = Path.GetRelativePath(source, sourceFile);
-                string destFile = Path.Combine(target, relativePath);
+                string relativePath = sourceFile.Substring(sourceDir.Length + 1);
+                string targetFile = Path.Combine(targetDir, relativePath);
 
-                string destDir = Path.GetDirectoryName(destFile);
-                if (!string.IsNullOrEmpty(destDir))
-                    Directory.CreateDirectory(destDir);
+                Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                if (ShouldCopy(sourceFile, destFile))
-                    File.Copy(sourceFile, destFile, overwrite: true);
+                FileInfo sourceInfo = new FileInfo(sourceFile);
+                FileInfo targetInfo = new FileInfo(targetFile);
+
+                long fileSize = sourceInfo.Length;
+
+                // Differential Logic: Check if we actually need to copy this file
+                bool shouldCopy = false;
+
+                if (!targetInfo.Exists)
+                {
+                    // File is brand new
+                    shouldCopy = true;
+                }
+                else if (sourceInfo.LastWriteTime > targetInfo.LastWriteTime)
+                {
+                    // Source file has been modified more recently than the target
+                    shouldCopy = true;
+                }
+
+                if (shouldCopy)
+                {
+                    long transferTimeMs = -1;
+                    Stopwatch stopwatch = new Stopwatch();
+
+                    try
+                    {
+                        jobContext.CurrentSourceFile = sourceFile;
+                        jobContext.CurrentTargetFile = targetFile;
+
+                        stopwatch.Start();
+                        File.Copy(sourceFile, targetFile, true);
+                        stopwatch.Stop();
+                        transferTimeMs = stopwatch.ElapsedMilliseconds;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
+                    }
+                    finally
+                    {
+                        jobContext.FilesRemaining--;
+                        jobContext.SizeRemaining -= fileSize;
+                        // Log the file transfer details to EasyLogger
+                        //EasyLogger.Instance.WriteLog(jobContext.Name, sourceFile, targetFile, fileSize, transferTimeMs);
+                        jobContext.NotifyProgress();
+                    }
+                }
+                else
+                {
+                    // If we skip the file, we still need to decrease the remaining counters 
+                    // so the progress bar / state.json updates correctly
+                    jobContext.FilesRemaining--;
+                    jobContext.SizeRemaining -= fileSize;
+                    jobContext.NotifyProgress();
+                }
             }
-        }
-
-        /// Returns true if the file is new or has been modified since last backup.
-        private bool ShouldCopy(string sourceFile, string destFile)
-        {
-            if (!File.Exists(destFile))
-                return true;
-
-            return File.GetLastWriteTime(sourceFile) > File.GetLastWriteTime(destFile);
         }
     }
 }
