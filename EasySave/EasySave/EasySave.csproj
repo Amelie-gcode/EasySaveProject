@@ -8,11 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Ressources\" />
+    <ProjectReference Include="..\EasyLog\EasyLog.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EasyLog\EasyLog.csproj" />
+    <None Update="Resources\string-en.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\string-fr.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

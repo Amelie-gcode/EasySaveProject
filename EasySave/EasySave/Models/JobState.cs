@@ -1,10 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace EasySave.Models
+﻿namespace EasySave.Models
 {
-    internal class JobState
+    /// <summary>
+    /// Represents the current execution status of a backup job.
+    /// </summary>
+    public enum JobState
     {
+        /// <summary>
+        /// The job is configured but not currently running.
+        /// </summary>
+        Inactive,
+
+        /// <summary>
+        /// The job is currently executing and transferring files.
+        /// </summary>
+        Active,
+
+        /// <summary>
+        /// The job has finished its execution successfully.
+        /// </summary>
+        Completed,
+
+        /// <summary>
+        /// The job encountered a critical issue during execution.
+        /// </summary>
+        Error
     }
 }
