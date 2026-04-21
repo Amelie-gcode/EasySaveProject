@@ -1,4 +1,5 @@
 ```mermaid
+
 classDiagram
     %% --- MAIN ENTRY POINT ---
     namespace EasySave_Main {
@@ -90,11 +91,23 @@ classDiagram
 
     %% --- REQUIRED DLL ---
     namespace EasyLog_DLL {
+        class LogEntry {
+            + DateTime Timestamp
+            + string BackupName
+            + string SourceFilePath
+            + string TargetFilePath
+            + long FileSize
+            + long TransferTimeMs
+        }
+
         class EasyLogger {
             <<Singleton>>
+            - object _writeLock
             - string _logDirectory
+            + EasyLogger()
+            + EasyLogger(string logDirectory)
             + static Instance
-            + WriteLog(logEntry)
+            + WriteLog(LogEntry entry)
         }
     }
 
@@ -136,4 +149,5 @@ classDiagram
     
     %% Logging (Singleton)
     BackupJob ..> EasyLogger : Sends log data
+    EasyLogger ..> LogEntry : Writes entries
 ```
