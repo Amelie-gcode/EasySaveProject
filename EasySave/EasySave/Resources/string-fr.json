@@ -4,7 +4,9 @@
   "MenuOption2": "2. Exécuter tous les travaux de sauvegarde séquentiellement",
   "MenuOption3": "3. Changer la langue de l'application (EN/FR)",
   "MenuOption4": "4. Créer un Job",
-  "MenuOption5": "5. Exit Application",
+  "MenuOption5": "5. Supprimer un Job",
+  "MenuOption6": "6. Modifier un Job",
+  "MenuOption7": "7. Quitter l'application",
   "PromptSelectOption": "Sélectionnez une option : ",
   "PromptEnterJobId": "Entrez l'ID du travail à exécuter (1-5) : ",
   "MsgStartingJob": "Démarrage de l'exécution pour le travail ID :",
@@ -29,5 +31,10 @@
   "LabelName": "Nom",
   "LabelState": "État actuel",
   "LabelSource": "Source",
-  "LabelTarget": "Cible"
+  "LabelTarget": "Cible",
+  "PromptEnterJobIdToDelete": "Entrez l'ID du travail que vous souhaitez SUPPRIMER : ",
+  "PromptEnterJobIdToModify": "Entrez l'ID du travail que vous souhaitez MODIFIER : ",
+  "MsgJobDeletedSuccess": "Le travail de sauvegarde a été supprimé avec succès.",
+  "MsgJobModifiedSuccess": "Le travail de sauvegarde a été mis à jour avec succès."
+
 }

@@ -4,7 +4,9 @@
   "MenuOption2": "2. Execute all Backup Jobs sequentially",
   "MenuOption3": "3. Change Application Language (EN/FR)",
   "MenuOption4": "4. Create a Job",
-  "MenuOption5": "5. Exit Application",
+  "MenuOption5": "5. Delete a Job",
+  "MenuOption6": "6. Modify a Job",
+  "MenuOption7": "7. Exit Application",
   "PromptSelectOption": "Select an option: ",
   "PromptEnterJobId": "Enter the Job ID to execute (1-5): ",
   "MsgStartingJob": "Starting execution for Job ID:",
@@ -29,5 +31,9 @@
   "LabelName": "Name",
   "LabelState": "Current State",
   "LabelSource": "Source",
-  "LabelTarget": "Target"
+  "LabelTarget": "Target",
+  "PromptEnterJobIdToDelete": "Enter the ID of the job you want to DELETE: ",
+  "PromptEnterJobIdToModify": "Enter the ID of the job you want to MODIFY: ",
+  "MsgJobDeletedSuccess": "The backup job was successfully deleted.",
+  "MsgJobModifiedSuccess": "The backup job was successfully updated."
 }
