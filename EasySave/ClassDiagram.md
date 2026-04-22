@@ -1,139 +1,169 @@
-```mermaid
-classDiagram
-    %% --- MAIN ENTRY POINT ---
-    namespace EasySave_Main {
-        class Program {
-            + static Main(string[] args)
-        }
+```classDiagram
+    %% ==============================
+    %% VIEW LAYER
+    %% ==============================
+    class ConsoleView {
+        -MainViewModel _viewModel
+        +ConsoleView(MainViewModel vm)
+        +DisplayMenu()
+        -CreateJobMenu()
+        -ExecuteSingleJobMenu()
+        -DisplayJobsMenu()
+        -DeleteJobMenu()
+        -ModifyJobMenu()
+        -ChangeLanguageMenu()
+        -ReadUserInput() string
     }
 
-    %% --- VIEWS (MVVM) ---
-    namespace EasySave_Views {
-        class ConsoleView {
-            - MainViewModel _viewModel
-            + ConsoleView(MainViewModel vm)
-            + DisplayMenu()
-            + ReadUserInput()
-        }
+    %% ==============================
+    %% VIEWMODEL LAYER
+    %% ==============================
+    class MainViewModel {
+        -BackupManager _backupManager
+        -IConfigManager _configManager
+        -StateManager _stateManager
+        -SettingsManager _settingsManager
+        -AppSettings _currentSettings
+        +List~BackupJob~ Jobs
+        +MainViewModel(IConfigManager configManager)
+        +CreateJobCommand(name, source, target, isDifferential) bool
+        +DeleteJobCommand(jobId) bool
+        +ModifyJobCommand(jobId, name, source, target, isDifferential) bool
+        +ExecuteJobCommand(jobId)
+        +ExecuteAllJobsCommand()
+        +ChangeLanguageCommand(langCode)
+        +GetString(key) string
     }
 
-    %% --- VIEWMODELS (MVVM) ---
-    namespace EasySave_ViewModels {
-        class MainViewModel {
-            - BackupManager _backupManager
-            - LocalizationManager _localization
-            + string CurrentLanguage
-            + List~BackupJob~ Jobs
-            + ExecuteJobCommand(int id)
-            + ExecuteJobsFromCommandLine(string arguments)
-            + ChangeLanguageCommand(string langCode)
-        }
+    %% ==============================
+    %% MODEL LAYER - CORE
+    %% ==============================
+    class BackupManager {
+        -List~BackupJob~ _jobs
+        -IConfigManager _configManager
+        -StateManager _stateManager
+        +BackupManager(IConfigManager configManager)
+        +CreateJob(name, source, target, isDifferential) bool
+        +DeleteJob(index) bool
+        +ModifyJob(index, newName, newSource, newTarget, isDifferential) bool
+        +ExecuteJob(index)
+        +ExecuteAll()
+        +GetJobs() List~BackupJob~
+        -LoadFromConfig()
     }
 
-    %% --- MODELS (CORE BUSINESS LOGIC) ---
-    namespace EasySave_Models {
-        class JobState {
-            <<enumeration>>
-            Inactive
-            Active
-            Completed
-            Error
-        }
-
-        class BackupManager {
-            - List~BackupJob~ _jobs
-            - StateManager _stateManager
-            + CreateJob(name, source, target, type)
-            + ExecuteJob(int id)
-            + ExecuteAll()
-        }
-
-        class BackupJob {
-            + string Name
-            + string SourcePath
-            + string TargetPath
-            + JobState State
-            - IBackupStrategy _strategy
-            + event EventHandler ProgressUpdated
-            + Execute()
-            - NotifyProgress()
-        }
-
-        class StateManager {
-            - string _stateFilePath
-            + OnJobProgressUpdated(sender, args)
-            - WriteToJson(data)
-        }
-
-        class LocalizationManager {
-            <<Singleton>>
-            - string _currentLanguage
-            - Dictionary _translations
-            + static Instance
-            + SetLanguage(string langCode)
-            + GetString(string key) : string
-        }
-
-        class IBackupStrategy {
-            <<Interface>>
-            + ExecuteBackup(string source, string target)
-        }
-        
-        class FullBackupStrategy {
-            + ExecuteBackup(string source, string target)
-        }
-        
-        class DifferentialBackupStrategy {
-            + ExecuteBackup(string source, string target)
-        }
+    class BackupJob {
+        +string Name
+        +string SourcePath
+        +string TargetPath
+        +JobState State
+        +int TotalFiles
+        +long TotalSize
+        +int FilesRemaining
+        +long SizeRemaining
+        +string CurrentSourceFile
+        +string CurrentTargetFile
+        -IBackupStrategy _strategy
+        +BackupJob(name, source, target, strategy)
+        +Execute()
+        +GetStrategy() IBackupStrategy
+        +NotifyProgress()
     }
 
-    %% --- REQUIRED DLL ---
-    namespace EasyLog_DLL {
+    class JobState {
+        <<enumeration>>
+        Inactive
+        Active
+        Paused
+        Completed
+        Error
+    }
+
+    %% ==============================
+    %% MODEL LAYER - STRATEGIES
+    %% ==============================
+    class IBackupStrategy {
+        <<interface>>
+        +ExecuteBackup(sourceDir, targetDir, jobContext)
+    }
+    class FullBackupStrategy {
+        +ExecuteBackup(sourceDir, targetDir, jobContext)
+    }
+    class DifferentialBackupStrategy {
+        +ExecuteBackup(sourceDir, targetDir, jobContext)
+    }
+
+    %% ==============================
+    %% MODEL LAYER - MANAGERS & DTOs
+    %% ==============================
+    class IConfigManager {
+        <<interface>>
+        +SaveJobs(List~BackupJob~ jobs)
+        +LoadJobs() List~JobSaveData~
+    }
+    class ConfigManager {
+        -_configFilePath : string
+        +SaveJobs(jobs)
+        +LoadJobs() List~JobSaveData~
+    }
+    class StateManager {
+        -_stateFilePath : string
+        -_jobStates : Dictionary
+        +OnJobProgressUpdated(sender, e)
+        -UpdateStateFile(job)
+        -LoadExistingStates()
+    }
+    class LocalizationManager {
+        <<Singleton>>
+        -static _instance : LocalizationManager
+        +CurrentLanguage : string
+        -LocalizationManager()
+        +Instance : LocalizationManager
+        +SetLanguage(langCode)
+        +GetString(key) string
+    }
+
+    %% ==============================
+    %% EXTERNAL LIBRARY (DLL)
+    %% ==============================
+    namespace EasyLog {
         class EasyLogger {
             <<Singleton>>
-            - string _logDirectory
-            + static Instance
-            + WriteLog(logEntry)
+            -static Lazy~EasyLogger~ LazyInstance
+            -_logDirectory : string
+            -_writeLock : object
+            -EasyLogger()
+            +Instance : EasyLogger
+            +WriteLog(LogEntry entry)
+        }
+        class LogEntry {
+            +DateTime Timestamp
+            +string BackupName
+            +string SourceFilePath
+            +string TargetFilePath
+            +long FileSize
+            +long TransferTimeMs
         }
     }
 
-    %% --- UNIT TESTING ---
-    namespace EasySave_Tests {
-        class BackupJobTests {
-            + Test_FullBackup_Success()
-            + Test_DifferentialBackup_IgnoresUnchanged()
-        }
-        class LoggerTests {
-            + Test_SingletonInstance()
-        }
-    }
-
-    %% --- RELATIONSHIPS & DEPENDENCIES ---
-    
-    %% Bootstrapping
-    Program --> ConsoleView : Instantiates & Starts
-    Program --> MainViewModel : Instantiates
-    
-    %% MVVM Bindings
-    ConsoleView --> MainViewModel : Binds to / Interacts
+    %% ==============================
+    %% RELATIONSHIPS
+    %% ==============================
+    ConsoleView --> MainViewModel : Binds to
     MainViewModel --> BackupManager : Invokes commands
-    MainViewModel --> LocalizationManager : Requests text
-    MainViewModel ..> BackupJob : Observes progress (via Events)
+    MainViewModel --> IConfigManager : Injects
+    MainViewModel --> LocalizationManager : Fetches strings
     
-    %% Core Model Composition
-    BackupManager "1" *-- "1" StateManager : Instantiates
-    BackupManager "1" *-- "0..5" BackupJob : Manages
+    BackupManager *-- BackupJob : Manages up to 5
+    BackupManager --> IConfigManager : Uses for persistence
+    BackupManager --> StateManager : Registers events
     
-    %% Strategy Pattern
-    BackupJob o-- IBackupStrategy : Uses
+    BackupJob --> JobState : Has state
+    BackupJob o-- IBackupStrategy : Uses pattern
+    BackupJob ..> EasyLogger : Logs transfers (via strategy)
+    
     IBackupStrategy <|.. FullBackupStrategy : Implements
     IBackupStrategy <|.. DifferentialBackupStrategy : Implements
     
-    %% State Tracking & Observer Pattern
-    BackupJob --> JobState : Uses
-    BackupJob ..> StateManager : Triggers event (decoupled)
-    
-    %% Logging (Singleton)
-    BackupJob ..> EasyLogger : Sends log data
+    IConfigManager <|.. ConfigManager : Implements
 ```
