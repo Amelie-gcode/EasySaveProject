@@ -38,6 +38,10 @@ namespace EasySave.Models
             State = JobState.Inactive;
         }
 
+        public IBackupStrategy GetStrategy()
+        {
+            return _strategy;
+        }
         /// <summary>
         /// Starts the backup process using the assigned strategy.
         /// </summary>

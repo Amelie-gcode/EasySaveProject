@@ -10,16 +10,33 @@ namespace EasySave.Models
         // Internal collection of jobs, limited to 5 as per specifications
         private readonly List<BackupJob> _jobs;
         private readonly StateManager _stateManager;
+        private readonly IConfigManager _configManager;
 
-        public BackupManager()
+        public BackupManager(IConfigManager configManager = null)
         {
             _jobs = new List<BackupJob>();
+
+            // If no specific manager is provided, fall back to our default JSON implementation
+            _configManager = configManager ?? new ConfigManager();
+
             _stateManager = new StateManager();
 
-            // In a real scenario, you might load existing jobs from a config file here
-            LoadConfiguredJobs();
+            // Load saved jobs on startup
+            LoadFromConfig();
         }
 
+        private void LoadFromConfig()
+        {
+            var savedJobs = _configManager.LoadJobs();
+            foreach (var data in savedJobs)
+            {
+                IBackupStrategy strategy = data.IsDifferential
+                    ? new DifferentialBackupStrategy()
+                    : new FullBackupStrategy();
+
+                _jobs.Add(new BackupJob(data.Name, data.Source, data.Target, strategy));
+            }
+        }
         /// <summary>
         /// Orchestrates the execution of a specific job by its ID.
         /// </summary>
@@ -91,18 +108,13 @@ namespace EasySave.Models
 
             // Immediately update state.json to show the new inactive job
             _stateManager.OnJobProgressUpdated(newJob, EventArgs.Empty);
-
+            _configManager.SaveJobs(_jobs);
             return true;
         }
 
         /// <summary>
         /// Internal helper to simulate or load job configurations.
         /// </summary>
-        private void LoadConfiguredJobs()
-        {
-            // Example of pre-loading a job for testing purposes
-            // In the final version, this would read from a JSON config file.
-        }
 
         // Getter for the ViewModel to display job lists in the UI
         public List<BackupJob> GetJobs() => _jobs;
