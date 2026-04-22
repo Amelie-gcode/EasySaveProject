@@ -145,7 +145,23 @@ namespace EasySave.ViewModel
         {
             return _backupManager.CreateJob(name, source, target, type);
         }
+        /// <summary>
+        /// Command to delete a job based on its UI ID (1-5).
+        /// </summary>
+        public bool DeleteJobCommand(int jobId)
+        {
+            // Subtract 1 to convert UI ID to list index
+            return _backupManager.DeleteJob(jobId - 1);
+        }
 
+        /// <summary>
+        /// Command to modify a job based on its UI ID (1-5).
+        /// </summary>
+        public bool ModifyJobCommand(int jobId, string name, string source, string target, bool isDifferential)
+        {
+            // Subtract 1 to convert UI ID to list index
+            return _backupManager.ModifyJob(jobId - 1, name, source, target, isDifferential);
+        }
         public void GetJobs()
         {
             List<BackupJob> jobs= _backupManager.GetJobs();

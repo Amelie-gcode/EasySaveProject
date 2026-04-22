@@ -113,6 +113,54 @@ namespace EasySave.Models
         }
 
         /// <summary>
+        /// Deletes a backup job at the specified index.
+        /// </summary>
+        /// <param name="index">The 0-based index of the job.</param>
+        /// <returns>True if deletion was successful, False otherwise.</returns>
+        public bool DeleteJob(int index)
+        {
+            // Validate that the index exists in the list
+            if (index < 0 || index >= _jobs.Count)
+            {
+                return false;
+            }
+
+            _jobs.RemoveAt(index);
+
+            // Automatically save the updated list to the JSON file
+            _configManager.SaveJobs(_jobs);
+
+            return true;
+        }
+
+        /// <summary>
+        /// Modifies an existing backup job at the specified index.
+        /// </summary>
+        /// <param name="index">The 0-based index of the job.</param>
+        /// <returns>True if modification was successful, False otherwise.</returns>
+        public bool ModifyJob(int index, string newName, string newSource, string newTarget, bool isDifferential)
+        {
+            // Validate that the index exists in the list
+            if (index < 0 || index >= _jobs.Count)
+            {
+                return false;
+            }
+
+            // Determine the new strategy
+            IBackupStrategy strategy = isDifferential
+                ? new DifferentialBackupStrategy()
+                : new FullBackupStrategy();
+
+            // Replace the old job with the newly configured job
+            _jobs[index] = new BackupJob(newName, newSource, newTarget, strategy);
+
+            // Automatically save the updated list to the JSON file
+            _configManager.SaveJobs(_jobs);
+
+            return true;
+        }
+
+        /// <summary>
         /// Internal helper to simulate or load job configurations.
         /// </summary>
 

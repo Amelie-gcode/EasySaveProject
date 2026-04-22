@@ -32,6 +32,8 @@ namespace EasySave.Views
                 Console.WriteLine(_viewModel.GetString("MenuOption3"));
                 Console.WriteLine(_viewModel.GetString("MenuOption4"));
                 Console.WriteLine(_viewModel.GetString("MenuOption5"));
+                Console.WriteLine(_viewModel.GetString("MenuOption6"));
+                Console.WriteLine(_viewModel.GetString("MenuOption7"));
 
                 Console.WriteLine("========================================");
                 Console.Write(_viewModel.GetString("PromptSelectOption"));
@@ -58,6 +60,13 @@ namespace EasySave.Views
                         CreateJobMenu();
                         break;
                     case "5":
+                        
+                        DeleteJobMenu();
+                        break;
+                    case "6":
+                        ModifyJobMenu();
+                        break;
+                    case "7":
                         IsRunning = false;
                         Console.WriteLine("Exiting EasySave. Goodbye!");
                         break;
@@ -213,6 +222,88 @@ namespace EasySave.Views
             }
 
             return true; // Tell the calling method that jobs were successfully displayed
+        }
+        /// <summary>
+        /// Sub-menu routine to handle deleting an existing job.
+        /// </summary>
+        private void DeleteJobMenu()
+        {
+            bool hasJobs = DisplayJobsMenu();
+            if (!hasJobs) return;
+
+            Console.WriteLine();
+            Console.Write(_viewModel.GetString("PromptEnterJobIdToDelete"));
+            string input = ReadUserInput();
+
+            // Ensure the input is a valid integer and falls within the current number of jobs
+            if (int.TryParse(input, out int jobId) && jobId >= 1 && jobId <= _viewModel.Jobs.Count)
+            {
+                bool success = _viewModel.DeleteJobCommand(jobId);
+
+                if (success)
+                    Console.WriteLine(_viewModel.GetString("MsgJobDeletedSuccess"));
+                else
+                    Console.WriteLine(_viewModel.GetString("ErrorInvalidJobId"));
+            }
+            else
+            {
+                Console.WriteLine(_viewModel.GetString("ErrorInvalidJobId"));
+            }
+
+            Console.WriteLine(_viewModel.GetString("MsgPressAnyKey"));
+            Console.ReadKey();
+        }
+
+        /// <summary>
+        /// Sub-menu routine to handle modifying an existing job.
+        /// </summary>
+        private void ModifyJobMenu()
+        {
+            bool hasJobs = DisplayJobsMenu();
+            if (!hasJobs) return;
+
+            Console.WriteLine();
+            Console.Write(_viewModel.GetString("PromptEnterJobIdToModify"));
+            string input = ReadUserInput();
+
+            // Ensure the input is a valid integer and falls within the current number of jobs
+            if (int.TryParse(input, out int jobId) && jobId >= 1 && jobId <= _viewModel.Jobs.Count)
+            {
+                // Collect the new parameters
+                Console.Write(_viewModel.GetString("PromptEnterJobName"));
+                string name = ReadUserInput();
+
+                Console.Write(_viewModel.GetString("PromptEnterSourcePath"));
+                string source = ReadUserInput();
+
+                Console.Write(_viewModel.GetString("PromptEnterTargetPath"));
+                string target = ReadUserInput();
+
+                Console.Write(_viewModel.GetString("PromptEnterJobType"));
+                string typeInput = ReadUserInput();
+                bool isDifferential = (typeInput == "2");
+
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
+                {
+                    Console.WriteLine(_viewModel.GetString("ErrorEmptyFields"));
+                }
+                else
+                {
+                    bool success = _viewModel.ModifyJobCommand(jobId, name, source, target, isDifferential);
+
+                    if (success)
+                        Console.WriteLine(_viewModel.GetString("MsgJobModifiedSuccess"));
+                    else
+                        Console.WriteLine(_viewModel.GetString("ErrorInvalidJobId"));
+                }
+            }
+            else
+            {
+                Console.WriteLine(_viewModel.GetString("ErrorInvalidJobId"));
+            }
+
+            Console.WriteLine(_viewModel.GetString("MsgPressAnyKey"));
+            Console.ReadKey();
         }
     }
 
