@@ -63,7 +63,14 @@ namespace EasySave.Strategies
                         jobContext.FilesRemaining--;
                         jobContext.SizeRemaining -= fileSize;
                         // Log the file transfer details to EasyLogger
-                        //EasyLogger.Instance.WriteLog(jobContext.Name, sourceFile, targetFile, fileSize, transferTimeMs);
+                        EasyLogger.Instance.WriteLog(new LogEntry
+                        {
+                            BackupName = jobContext.Name,
+                            SourceFilePath = sourceFile,
+                            TargetFilePath = targetFile,
+                            FileSize = fileSize,
+                            TransferTimeMs = transferTimeMs
+                        });
                         jobContext.NotifyProgress();
                     }
                 }

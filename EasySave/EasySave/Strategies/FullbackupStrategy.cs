@@ -59,7 +59,14 @@ namespace EasySave.Strategies
                     jobContext.SizeRemaining -= fileSize;
 
                     // Write to the Daily Log file via the Singleton DLL
-                    //EasyLogger.Instance.WriteLog(jobContext.Name, sourceFile, targetFile, fileSize, transferTimeMs);
+                    EasyLogger.Instance.WriteLog(new LogEntry
+                    {
+                        BackupName = jobContext.Name,
+                        SourceFilePath = sourceFile,
+                        TargetFilePath = targetFile,
+                        FileSize = fileSize,
+                        TransferTimeMs = transferTimeMs
+                    });
 
                     // Notify StateManager to update state.json
                     jobContext.NotifyProgress();
