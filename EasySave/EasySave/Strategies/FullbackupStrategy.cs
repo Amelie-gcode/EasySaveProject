@@ -46,6 +46,7 @@ namespace EasySave.Strategies
 
                     stopwatch.Stop();
                     transferTimeMs = stopwatch.ElapsedMilliseconds;
+                    jobContext.NotifyProgress();
                 }
                 catch (Exception ex)
                 {

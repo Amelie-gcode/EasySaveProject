@@ -1,4 +1,5 @@
-﻿using EasySave.Strategies;
+﻿using EasyLog;
+using EasySave.Strategies;
 using System;
 using System.IO;
 
@@ -45,24 +46,51 @@ namespace EasySave.Models
         /// <summary>
         /// Starts the backup process using the assigned strategy.
         /// </summary>
+        /// <summary>
+        /// Executes the backup job with pre-flight path validation.
+        /// </summary>
         public void Execute()
         {
+            this.State = JobState.Active;
+            NotifyProgress();
+
+            // 1. SOURCE CHECK: Verify that the source directory actually exists
+            if (!Directory.Exists(SourcePath))
+            {
+                HandlePathError("Source path not found or disconnected.");
+                return; // Safely abort the execution
+            }
+
+            // 2. TARGET CHECK: Ensure the target exists, or attempt to create it
             try
             {
-                // Initialize job stats
-                State = JobState.Active;
-                CalculateInitialStats();
-                NotifyProgress();
-
-                // Run the strategy logic
-                _strategy.ExecuteBackup(SourcePath, TargetPath, this);
-
-                State = JobState.Completed;
+                if (!Directory.Exists(TargetPath))
+                {
+                    Directory.CreateDirectory(TargetPath);
+                }
             }
             catch (Exception)
             {
-                State = JobState.Error;
-                throw;
+                // Catches errors like UnauthorizedAccessException or if a network drive is offline
+                HandlePathError("Target path could not be accessed or created.");
+                return; // Safely abort the execution
+            }
+
+            // 3. EXECUTION: If both paths are valid, proceed with the Strategy
+            try
+            {
+                CalculateInitialStats(); // Gather totals for progress tracking
+                _strategy.ExecuteBackup(SourcePath, TargetPath, this);
+
+                // Only mark as completed if the strategy didn't encounter internal fatal errors
+                if (this.State != JobState.Error)
+                {
+                    this.State = JobState.Completed;
+                }
+            }
+            catch (Exception)
+            {
+                this.State = JobState.Error;
             }
             finally
             {
@@ -70,6 +98,33 @@ namespace EasySave.Models
             }
         }
 
+        /// <summary>
+        /// Helper method to centralize error handling and logging for missing paths.
+        /// </summary>
+        private void HandlePathError(string errorMessage)
+        {
+            this.State = JobState.Error;
+
+            // Set remaining values to 0 since the job is aborted
+            this.FilesRemaining = 0;
+            this.SizeRemaining = 0;
+            this.CurrentSourceFile = errorMessage;
+
+            // Log the critical failure using your EasyLogger DLL
+            // TransferTimeMs = -1 is the standard indicator for a failed transfer
+            EasyLogger.Instance.WriteLog(new LogEntry
+            {
+                Timestamp = DateTime.Now,
+                BackupName = this.Name,
+                SourceFilePath = this.SourcePath,
+                TargetFilePath = this.TargetPath,
+                FileSize = 0,
+                TransferTimeMs = -1
+            });
+
+            // Trigger the event so the UI and state.json update immediately
+            NotifyProgress();
+        }
         /// <summary>
         /// Scans the source directory to provide totals for the real-time status file.
         /// </summary>
