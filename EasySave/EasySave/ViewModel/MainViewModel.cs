@@ -9,7 +9,8 @@ namespace EasySave.ViewModel
     {
         // Reference to the core business logic manager
         private readonly BackupManager _backupManager;
-
+        private readonly SettingsManager _settingsManager;
+        private AppSettings _currentSettings;
         /// <summary>
         /// Gets the list of currently configured backup jobs.
         /// </summary>
@@ -19,6 +20,13 @@ namespace EasySave.ViewModel
         /// </summary>
         public MainViewModel()
         {
+            _settingsManager = new SettingsManager();
+            _currentSettings = _settingsManager.LoadSettings();
+
+            //First Save to ensure the file exists for future updates (e.g., language changes)
+            _settingsManager.SaveSettings(_currentSettings);
+            // Apply the saved language choice immediately
+            LocalizationManager.Instance.SetLanguage(_currentSettings.Language);
             _backupManager = new BackupManager();
         }
         // ==========================================
@@ -81,6 +89,16 @@ namespace EasySave.ViewModel
         public void ChangeLanguageCommand(string langCode)
         {
             LocalizationManager.Instance.SetLanguage(langCode);
+            _currentSettings.Language = langCode.ToUpper();
+
+            // Persist the choice to disk
+            _settingsManager.SaveSettings(_currentSettings);
+        }
+
+        public void ChangeLogFormatCommand(string format)
+        {
+            _currentSettings.LogFormat = format.ToUpper();
+            _settingsManager.SaveSettings(_currentSettings);
         }
 
         // ==========================================

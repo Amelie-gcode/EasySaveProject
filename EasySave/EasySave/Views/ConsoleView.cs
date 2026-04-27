@@ -54,7 +54,8 @@ namespace EasySave.Views
                         }
                         break;
                     case "3":
-                        ChangeLanguageMenu();
+                        //ChangeLanguageMenu();
+                        ChangeSettingsMenu();
                         break;
                     case "4":
                         CreateJobMenu();
@@ -121,7 +122,52 @@ namespace EasySave.Views
             Console.WriteLine(_viewModel.GetString("MsgPressAnyKey"));
             Console.ReadKey();
         }
+        private void ChangeSettingsMenu()
+        {
+            Console.WriteLine();
+            Console.WriteLine("--- " + _viewModel.GetString("MenuChangeSettingsTitle") + " ---");
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption1"));
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption2"));
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption3"));
+            Console.WriteLine();
+            Console.Write(_viewModel.GetString("PromptSelectSettingToChange"));
+            string input = ReadUserInput();
+            switch (input)
+            {
+                case "1":
+                    ChangeLanguageMenu();
+                    break;
+                case "2":                  
+                    ChangeLogTypeMenu();
+                    
+                    break;
+                case "3":
+                    // Change encrypted extensions menu would go here
+                    Console.WriteLine();
+                    Console.WriteLine(_viewModel.GetString("MsgFeatureNotImplemented"));
+                    Console.ReadKey();
+                    break;
+                // Cases for other settings would go here
+                default:
+                    Console.WriteLine();
+                    Console.WriteLine(_viewModel.GetString("ErrorInvalidSettingOption"));
+                    Console.ReadKey();
+                    break;
+            }
+        }
 
+        private void ChangeLogTypeMenu()
+        {
+            Console.Write("Select log type [XML/JSON] / Sélectionnez le type de journal [XML/JSON] : ");
+            string input = ReadUserInput().ToUpper();
+            if (input == "XML" || input == "JSON")
+            {
+                _viewModel.ChangeLogFormatCommand(input);
+                // This message will now print in the newly selected type!
+                Console.WriteLine(_viewModel.GetString("MsgLogTypeChanged"));
+            }
+            Console.ReadKey();
+        }
         private void ChangeLanguageMenu()
         {
             Console.Write("Select language [EN/FR] / Sélectionnez la langue [EN/FR] : ");
