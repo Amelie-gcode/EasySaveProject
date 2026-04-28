@@ -1,4 +1,5 @@
-﻿using EasySave.Models;
+﻿using EasyLog;
+using EasySave.Models;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -99,6 +100,16 @@ namespace EasySave.ViewModel
         {
             _currentSettings.LogFormat = format.ToUpper();
             _settingsManager.SaveSettings(_currentSettings);
+
+            // 2. Update the Logger instance in real-time
+            if (format.ToLower() == "xml")
+            {
+                EasyLogger.Instance.SetLogFormat(new XmlLogWriter());
+            }
+            else
+            {
+                EasyLogger.Instance.SetLogFormat(new JsonLogWriter());
+            }
         }
 
         // ==========================================
