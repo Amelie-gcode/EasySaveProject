@@ -97,38 +97,34 @@ namespace EasySave.Models
         /// </summary>
         private void UpdateStateFile(BackupJob job)
         {
-            lock (_fileLock)
+            lock (_fileLock) // Protects both the Dictionary and the File I/O
             {
-                // Create or update the specific object for this job
-                var stateData = new JobStateData
+                // 1. Update the in-memory state
+                _jobStates[job.Name] = new JobStateData
                 {
                     Name = job.Name,
                     LastUpdate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     Status = job.State.ToString(),
                     TotalFiles = job.TotalFiles,
                     TotalSize = job.TotalSize,
-                    Progress = job.TotalFiles > 0 ? (100 - (job.FilesRemaining * 100 / job.TotalFiles)) : 0,
+                    // Calculate based on size for better accuracy
+                    Progress = job.TotalSize > 0 ? (int)((job.TotalSize - job.SizeRemaining) * 100 / job.TotalSize) : 0,
                     FilesRemaining = job.FilesRemaining,
                     SizeRemaining = job.SizeRemaining,
                     CurrentSource = job.CurrentSourceFile ?? string.Empty,
                     CurrentDestination = job.CurrentTargetFile ?? string.Empty
                 };
 
-                // Add or replace the job in our in-memory dictionary
-                _jobStates[job.Name] = stateData;
-
-                // We serialize the VALUES of the dictionary, which creates a clean JSON array [ {..}, {..} ]
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string jsonString = JsonSerializer.Serialize(_jobStates.Values.ToList(), options);
-
+                // 2. Write the entire collection to disk
                 try
                 {
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    string jsonString = JsonSerializer.Serialize(_jobStates.Values, options);
                     File.WriteAllText(_stateFilePath, jsonString);
                 }
-                catch (IOException ex)
+                catch (IOException)
                 {
-                    // Log error but don't crash the backup process
-                    Console.WriteLine($"Warning: Could not update state file: {ex.Message}");
+                    // Fail silently or log to console
                 }
             }
         }
