@@ -1,5 +1,7 @@
 <Solution>
   <Project Path="EasyLog/EasyLog.csproj" Id="2965a659-eeae-438b-bac6-d1cbf8e993e1" />
+  <Project Path="EasySave.Core/EasySave.Core.csproj" Id="6367138c-4816-4ea1-8ca0-0aff39abae21" />
   <Project Path="EasySave.Tests/EasySave.Tests.csproj" Id="8d1df4be-1183-46e0-91d7-d5274d69df74" />
-  <Project Path="EasySave/EasySave.csproj" Id="cece7f51-d970-4126-8ff0-58054db7042b" />
+  <Project Path="EasySave.WPF/EasySave.WPF.csproj" Id="2d902ba5-1b6e-4058-be70-3999ef37fa34" />
+  <Project Path="EasySave/EasySave.Console.csproj" Id="cece7f51-d970-4126-8ff0-58054db7042b" />
 </Solution>
