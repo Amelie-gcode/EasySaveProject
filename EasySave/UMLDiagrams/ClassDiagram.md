@@ -1,5 +1,5 @@
 ```mermaid
-classDiagram
+    classDiagram
     %% ==============================
     %% VIEW LAYER
     %% ==============================
@@ -24,7 +24,6 @@ classDiagram
         -IConfigManager _configManager
         -StateManager _stateManager
         -SettingsManager _settingsManager
-        -AppSettings _currentSettings
         +List~BackupJob~ Jobs
         +MainViewModel(IConfigManager configManager)
         +CreateJobCommand(name, source, target, isDifferential) bool
@@ -32,13 +31,26 @@ classDiagram
         +ModifyJobCommand(jobId, name, source, target, isDifferential) bool
         +ExecuteJobCommand(jobId)
         +ExecuteAllJobsCommand()
-        +ChangeLanguageCommand(langCode)
+        +UpdateSettingsCommand(lang, logFormat)
         +GetString(key) string
     }
 
     %% ==============================
-    %% MODEL LAYER - CORE
+    %% MODEL LAYER - CORE & SETTINGS
     %% ==============================
+    class SettingsManager {
+        -_settingsFilePath : string
+        +AppSettings CurrentSettings
+        +LoadSettings() AppSettings
+        +SaveSettings(AppSettings settings)
+    }
+
+    class AppSettings {
+        +string Language
+        +string LogFormat
+        +string SoftwareExtension
+    }
+
     class BackupManager {
         -List~BackupJob~ _jobs
         -IConfigManager _configManager
@@ -67,7 +79,6 @@ classDiagram
         -IBackupStrategy _strategy
         +BackupJob(name, source, target, strategy)
         +Execute()
-        +GetStrategy() IBackupStrategy
         +NotifyProgress()
     }
 
@@ -95,7 +106,7 @@ classDiagram
     }
 
     %% ==============================
-    %% MODEL LAYER - MANAGERS & DTOs
+    %% MODEL LAYER - MANAGERS
     %% ==============================
     class IConfigManager {
         <<interface>>
@@ -118,25 +129,39 @@ classDiagram
         <<Singleton>>
         -static _instance : LocalizationManager
         +CurrentLanguage : string
-        -LocalizationManager()
         +Instance : LocalizationManager
         +SetLanguage(langCode)
         +GetString(key) string
     }
 
     %% ==============================
-    %% EXTERNAL LIBRARY (DLL)
+    %% EXTERNAL LIBRARY (DLL) - STRATEGY LOGGING
     %% ==============================
     namespace EasyLog {
         class EasyLogger {
             <<Singleton>>
             -static Lazy~EasyLogger~ LazyInstance
+            -ILogWriter _currentWriter
             -_logDirectory : string
-            -_writeLock : object
             -EasyLogger()
             +Instance : EasyLogger
+            +SetLogFormat(ILogWriter writer)
             +WriteLog(LogEntry entry)
         }
+
+        class ILogWriter {
+            <<interface>>
+            +Write(LogEntry entry, string directory)
+        }
+
+        class JsonLogWriter {
+            +Write(LogEntry entry, string directory)
+        }
+
+        class XmlLogWriter {
+            +Write(LogEntry entry, string directory)
+        }
+
         class LogEntry {
             +DateTime Timestamp
             +string BackupName
@@ -151,20 +176,25 @@ classDiagram
     %% RELATIONSHIPS
     %% ==============================
     ConsoleView --> MainViewModel : Binds to
-    MainViewModel --> BackupManager : Invokes commands
-    MainViewModel --> IConfigManager : Injects
-    MainViewModel --> LocalizationManager : Fetches strings
+    MainViewModel --> BackupManager : Invokes
+    MainViewModel --> SettingsManager : Configures settings
+    MainViewModel --> LocalizationManager : Translates
     
-    BackupManager *-- BackupJob : Manages up to 5
-    BackupManager --> IConfigManager : Uses for persistence
-    BackupManager --> StateManager : Registers events
+    SettingsManager o-- AppSettings : Aggregates
+    BackupManager *-- BackupJob : Manages
+    BackupManager --> StateManager : Observer
     
-    BackupJob --> JobState : Has state
-    BackupJob o-- IBackupStrategy : Uses pattern
-    BackupJob ..> EasyLogger : Logs transfers (via strategy)
+    BackupJob o-- IBackupStrategy : Strategy Pattern
+    BackupJob ..> EasyLogger : Uses Singleton
     
-    IBackupStrategy <|.. FullBackupStrategy : Implements
-    IBackupStrategy <|.. DifferentialBackupStrategy : Implements
+    IBackupStrategy <|.. FullBackupStrategy
+    IBackupStrategy <|.. DifferentialBackupStrategy
+    MainViewModel --> IConfigManager : Loads/Saves
+    IConfigManager <|.. ConfigManager
     
-    IConfigManager <|.. ConfigManager : Implements
+    %% Logger Strategy Relationships
+    EasyLogger o-- ILogWriter : Uses Strategy
+    ILogWriter <|.. JsonLogWriter
+    ILogWriter <|.. XmlLogWriter
+    EasyLogger ..> LogEntry : Formats
 ```
