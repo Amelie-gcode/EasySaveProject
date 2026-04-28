@@ -19,59 +19,53 @@ namespace EasySave.Strategies
 
             foreach (string sourceFile in files)
             {
-                // Calculate the corresponding destination path
-                string relativePath = sourceFile.Substring(sourceDir.Length + 1);
+                // 1. Prepare paths
+                string relativePath = Path.GetRelativePath(sourceDir, sourceFile);
                 string targetFile = Path.Combine(targetDir, relativePath);
-
-                // Ensure the target folder structure exists
                 Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                long fileSize = 0;
-                long transferTimeMs = -1; // Default to -1 in case of error, per specs
-                Stopwatch stopwatch = new Stopwatch();
+                long fileSize = new FileInfo(sourceFile).Length;
+                Stopwatch stopwatch = Stopwatch.StartNew();
 
                 try
                 {
-                    FileInfo fileInfo = new FileInfo(sourceFile);
-                    fileSize = fileInfo.Length;
-
-                    // Update job context with current file being processed
+                    // 2. Update Context for "Active" display
                     jobContext.CurrentSourceFile = sourceFile;
                     jobContext.CurrentTargetFile = targetFile;
 
-                    stopwatch.Start();
+                    // Notify state that we are starting this specific file
+                    jobContext.NotifyProgress();
 
-                    // Copy the file, true means overwrite if it exists
                     File.Copy(sourceFile, targetFile, true);
-
                     stopwatch.Stop();
-                    transferTimeMs = stopwatch.ElapsedMilliseconds;
+
+                    // 3. Update Progress Counters immediately after success
+                    jobContext.FilesRemaining--;
+                    jobContext.SizeRemaining -= fileSize;
+                    // The JobContext.NotifyProgress() logic should recalculate 
+                    // Progress = (Total - Remaining) / Total
                 }
                 catch (Exception ex)
                 {
-                    // Log the error to console, but let the loop continue to the next file
-                    Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
+                    Console.WriteLine($"Error: {ex.Message}");
                 }
                 finally
                 {
-                    // Update remaining counters
-                    jobContext.FilesRemaining--;
-                    jobContext.SizeRemaining -= fileSize;
-
-                    // Write to the Daily Log file via the Singleton DLL
+                    // 4. Final log and State Update
                     EasyLogger.Instance.WriteLog(new LogEntry
                     {
                         BackupName = jobContext.Name,
                         SourceFilePath = sourceFile,
                         TargetFilePath = targetFile,
                         FileSize = fileSize,
-                        TransferTimeMs = transferTimeMs
+                        TransferTimeMs = stopwatch.ElapsedMilliseconds
                     });
 
-                    // Notify StateManager to update state.json
+                    // Final notification for this file iteration
                     jobContext.NotifyProgress();
                 }
             }
+                
         }
     }
 }

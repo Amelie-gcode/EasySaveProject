@@ -52,6 +52,7 @@ namespace EasySave.Strategies
                         stopwatch.Start();
                         File.Copy(sourceFile, targetFile, true);
                         stopwatch.Stop();
+                        jobContext.NotifyProgress();
                         transferTimeMs = stopwatch.ElapsedMilliseconds;
                     }
                     catch (Exception ex)
