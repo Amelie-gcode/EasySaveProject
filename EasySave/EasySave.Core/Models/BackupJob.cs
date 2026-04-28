@@ -1,7 +1,8 @@
-﻿using EasyLog;
+﻿
 using EasySave.Strategies;
 using System;
 using System.IO;
+using EasyLog;
 
 namespace EasySave.Models
 {
