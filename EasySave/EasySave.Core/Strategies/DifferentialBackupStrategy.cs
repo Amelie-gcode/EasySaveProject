@@ -15,6 +15,32 @@ namespace EasySave.Strategies
 
             foreach (string sourceFile in files)
             {
+
+                // ✅ CHECK #2 — before each file, stop if business software just opened
+                if (jobContext.Settings != null &&
+                    jobContext.BusinessService.IsBusinessSoftwareRunning(
+                        jobContext.Settings.BusinessSoftwareName))
+                {
+                    string detected = jobContext.BusinessService.GetDetectedSoftwareName(
+                        jobContext.Settings.BusinessSoftwareName);
+
+                    jobContext.State = JobState.Error;
+                    jobContext.CurrentSourceFile = $"BLOCKED by: {detected}";
+
+                    EasyLogger.Instance.WriteLog(new LogEntry
+                    {
+                        Timestamp = DateTime.Now,
+                        BackupName = jobContext.Name,
+                        SourceFilePath = $"BLOCKED by: {detected}",
+                        TargetFilePath = string.Empty,
+                        FileSize = 0,
+                        TransferTimeMs = -1
+                    });
+
+                    jobContext.NotifyProgress();
+                    return; // previous file already fully copied, next ones are skipped
+                }
+
                 string relativePath = sourceFile.Substring(sourceDir.Length + 1);
                 string targetFile = Path.Combine(targetDir, relativePath);
 

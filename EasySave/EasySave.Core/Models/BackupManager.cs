@@ -69,6 +69,7 @@ namespace EasySave.Models
             // We pass the ALREADY DECRYPTED key (handled by LoadSettings)
             job.Encryption = _encryptionService;
             job.EncryptionKey = settings.EncryptionKey;
+            job.Settings = settings;
 
             if (job.State == JobState.Active)
             {

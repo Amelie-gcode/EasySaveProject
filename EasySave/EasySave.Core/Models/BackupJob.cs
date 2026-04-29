@@ -1,8 +1,9 @@
 ﻿
+using EasyLog;
+using EasySave.Core.Strategies;
 using EasySave.Strategies;
 using System;
 using System.IO;
-using EasyLog;
 
 namespace EasySave.Models
 {
@@ -35,6 +36,12 @@ namespace EasySave.Models
         public EncryptionService Encryption { get; set; }
         public string EncryptionKey { get; set; }
 
+
+        //needed to check business software during execution
+        public BusinessSoftwareService BusinessService { get; set; }
+        public AppSettings Settings { get; set; }
+
+
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {
             Name = name;
@@ -42,6 +49,7 @@ namespace EasySave.Models
             TargetPath = target;
             _strategy = strategy;
             State = JobState.Inactive;
+            BusinessService = new BusinessSoftwareService();
         }
 
         public IBackupStrategy GetStrategy()
@@ -56,6 +64,27 @@ namespace EasySave.Models
         /// </summary>
         public void Execute()
         {
+            // ✅ CHECK #1 — before the backup starts
+            if (Settings != null && BusinessService != null && BusinessService.IsBusinessSoftwareRunning(Settings.BusinessSoftwareName))
+            {
+                string detected = BusinessService.GetDetectedSoftwareName(Settings.BusinessSoftwareName);
+                State = JobState.Error;
+                FilesRemaining = 0;
+                SizeRemaining = 0;
+
+                EasyLogger.Instance.WriteLog(new LogEntry
+                {
+                    Timestamp = DateTime.Now,
+                    BackupName = Name,
+                    SourceFilePath = $"BLOCKED by: {detected}",
+                    TargetFilePath = string.Empty,
+                    FileSize = 0,
+                    TransferTimeMs = -1
+                });
+
+                NotifyProgress();
+                return;
+            }
             this.State = JobState.Active;
             NotifyProgress();
 
@@ -88,7 +117,7 @@ namespace EasySave.Models
                 _strategy.ExecuteBackup(SourcePath, TargetPath, this);
 
                 // Only mark as completed if the strategy didn't encounter internal fatal errors
-                if (this.State != JobState.Error)
+                if (this.State != JobState.Error && this.State != JobState.Error)
                 {
                     this.State = JobState.Completed;
                 }

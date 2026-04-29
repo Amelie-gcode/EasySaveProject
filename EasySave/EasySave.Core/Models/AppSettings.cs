@@ -19,6 +19,6 @@ namespace EasySave.Models
         public string EncryptionKey { get; set; } = "default";
 
         // The name of the business software that blocks backups for Version 2.0
-        public string BusinessSoftwareName { get; set; } = "calculator";
+        public List<string> BusinessSoftwareName { get; set; } = new List<string> { "calculator" };
     }
 }
