@@ -19,6 +19,8 @@ namespace EasySave.Strategies
 
             foreach (string sourceFile in files)
             {
+                jobContext.CheckPauseAndCancellation();
+
                 // 1. Prepare paths
                 string relativePath = Path.GetRelativePath(sourceDir, sourceFile);
                 string targetFile = Path.Combine(targetDir, relativePath);
@@ -36,14 +38,16 @@ namespace EasySave.Strategies
                     // Notify state that we are starting this specific file
                     jobContext.NotifyProgress();
 
-                    File.Copy(sourceFile, targetFile, true);
+                    CopyFileWithControl(sourceFile, targetFile, jobContext);
                     stopwatch.Stop();
 
                     // 3. Update Progress Counters immediately after success
                     jobContext.FilesRemaining--;
-                    jobContext.SizeRemaining -= fileSize;
-                    // The JobContext.NotifyProgress() logic should recalculate 
-                    // Progress = (Total - Remaining) / Total
+                    // SizeRemaining is updated during the copy to keep progress smooth.
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -66,6 +70,31 @@ namespace EasySave.Strategies
                 }
             }
                 
+        }
+
+        private static void CopyFileWithControl(string sourceFile, string targetFile, BackupJob jobContext)
+        {
+            const int BufferSize = 1024 * 1024; // 1MB
+
+            using var source = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var target = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            byte[] buffer = new byte[BufferSize];
+            int read;
+
+            var notify = Stopwatch.StartNew();
+            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                jobContext.CheckPauseAndCancellation();
+                target.Write(buffer, 0, read);
+                jobContext.SizeRemaining -= read;
+
+                if (notify.ElapsedMilliseconds >= 100)
+                {
+                    jobContext.NotifyProgress();
+                    notify.Restart();
+                }
+            }
         }
     }
 }

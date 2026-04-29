@@ -6,10 +6,19 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EasySave.Core\EasySave.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Needed because LocalizationManager loads these JSON from the executable output folder. -->
+    <None Include="..\EasySave.Core\Resources\string-en.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-en.json" />
+    <None Include="..\EasySave.Core\Resources\string-fr.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-fr.json" />
+    <None Include="..\EasySave.Core\Resources\string-es.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-es.json" />
+    <None Include="..\EasySave.Core\Resources\string-ar.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-ar.json" />
   </ItemGroup>
 
 </Project>

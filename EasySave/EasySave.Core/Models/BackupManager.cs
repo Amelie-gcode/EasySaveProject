@@ -54,7 +54,7 @@ namespace EasySave.Models
 
             BackupJob job = _jobs[index];
 
-            if (job.State == JobState.Active)
+            if (job.State == JobState.Active || job.State == JobState.Paused)
             {
                 Console.WriteLine($"Error: Job '{job.Name}' is already running.");
                 return;

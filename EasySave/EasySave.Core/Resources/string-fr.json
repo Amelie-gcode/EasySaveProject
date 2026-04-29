@@ -44,6 +44,26 @@
   "MsgFeatureNotImplemented": "Cette fonctionnalité n'est pas encore implémentée. Veuillez vérifier les mises à jour à l'avenir.",
   "ErrorInvalidSettingOption": "Option invalide sélectionnée. Veuillez réessayer.",
   "MsgLogTypeChanged": "Format du journal changé avec succès."
+  ,
+  "GuiLanguage": "Langue",
+  "GuiJobEditor": "Éditeur de job",
+  "GuiBrowse": "Parcourir...",
+  "GuiSelectFolder": "Sélectionner un dossier",
+  "GuiDifferentialBackup": "Sauvegarde différentielle",
+  "GuiCreate": "Créer",
+  "GuiModify": "Modifier",
+  "GuiDelete": "Supprimer",
+  "GuiExecuteChecked": "Exécuter cochés",
+  "GuiExecuteAll": "Tout exécuter",
+  "GuiPause": "Pause",
+  "GuiResume": "Reprendre",
+  "GuiCancel": "Annuler",
+  "StateInactive": "Inactif",
+  "StateActive": "Actif",
+  "StatePaused": "En pause",
+  "StateCompleted": "Terminé",
+  "StateCancelled": "Annulé",
+  "StateError": "Erreur"
   
 
 }
