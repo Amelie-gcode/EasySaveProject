@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 
@@ -26,13 +27,21 @@ namespace EasySave.Models
         /// <summary>
         /// Loads the translation file for the specified language.
         /// </summary>
-        /// <param name="langCode">"EN" or "FR"</param>
+        /// <param name="langCode">"EN", "FR", "ES" or "AR"</param>
         public void SetLanguage(string langCode)
         {
             langCode = langCode.ToUpper();
-            if (langCode != "EN" && langCode != "FR") return;
+            if (langCode != "EN" && langCode != "FR" && langCode != "ES" && langCode != "AR") return;
 
-            string filePath = $"Resources/string-{langCode.ToLower()}.json";
+            // Prefer loading from the executable output folder (e.g. bin/..../Resources/..).
+            // Fallback to legacy relative path for backward compatibility.
+            string langLower = langCode.ToLower();
+            string filePath = Path.Combine(AppContext.BaseDirectory, "Resources", $"string-{langLower}.json");
+            if (!File.Exists(filePath))
+            {
+                string legacyPath = Path.Combine("Resources", $"string-{langLower}.json");
+                filePath = legacyPath;
+            }
 
             try
             {

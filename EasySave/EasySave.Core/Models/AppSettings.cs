@@ -14,7 +14,7 @@ namespace EasySave.Models
         // List of file extensions that should be encrypted by CryptoSoft for Version 2.0
         public List<string> EncryptedExtensions { get; set; } = new List<string> { ".txt", ".docx", ".pdf" };
 
-        public string CryptoSoftPath { get; set; } = @"C:\Users\ameli\Documents\A3\Software\project\EasySave\External\CryptoSoft\CryptoSoft.exe";
+        public string CryptoSoftPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EasySave\\CryptoSoft\\bin\\Debug\\net8.0\\win-x64\\CryptoSoft.exe");
 
         public string EncryptionKey { get; set; } = "default";
 

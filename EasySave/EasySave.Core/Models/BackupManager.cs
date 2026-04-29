@@ -62,6 +62,7 @@ namespace EasySave.Models
 
             BackupJob job = _jobs[index];
 
+            
             // 1. Refresh settings (in case the user changed the key or extensions recently)
             var settings = _settingsManager.LoadSettings();
 
@@ -71,7 +72,7 @@ namespace EasySave.Models
             job.EncryptionKey = settings.EncryptionKey;
             job.Settings = settings;
 
-            if (job.State == JobState.Active)
+            if (job.State == JobState.Active || job.State == JobState.Paused)
             {
                 Console.WriteLine($"Error: Job '{job.Name}' is already running.");
                 return;

@@ -3,6 +3,7 @@ using EasySave.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace EasySave.Strategies
@@ -40,6 +41,7 @@ namespace EasySave.Strategies
                     jobContext.NotifyProgress();
                     return; // previous file already fully copied, next ones are skipped
                 }
+                jobContext.CheckPauseAndCancellation();
 
                 string relativePath = sourceFile.Substring(sourceDir.Length + 1);
                 string targetFile = Path.Combine(targetDir, relativePath);
@@ -69,24 +71,31 @@ namespace EasySave.Strategies
                 {
                     long transferTimeMs = -1;
                     Stopwatch stopwatch = new Stopwatch();
-
+                    long encryptionTime = 0;
                     try
                     {
                         jobContext.CurrentSourceFile = sourceFile;
                         jobContext.CurrentTargetFile = targetFile;
 
                         stopwatch.Start();
+                        
                         if (jobContext.Encryption.ShouldEncrypt(sourceFile))
                         {
-                            jobContext.Encryption.Encrypt(sourceFile, targetFile, jobContext.EncryptionKey);
+                            CopyFileWithControl(sourceFile, targetFile, jobContext);
+                            encryptionTime =jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey);
                         }
                         else
                         {
-                            File.Copy(sourceFile, targetFile, true);
+                            CopyFileWithControl(sourceFile, targetFile, jobContext);
+
                         }
                         stopwatch.Stop();
                         jobContext.NotifyProgress();
                         transferTimeMs = stopwatch.ElapsedMilliseconds;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -95,7 +104,7 @@ namespace EasySave.Strategies
                     finally
                     {
                         jobContext.FilesRemaining--;
-                        jobContext.SizeRemaining -= fileSize;
+                        // SizeRemaining is updated during the copy to keep progress smooth.
                         // Log the file transfer details to EasyLogger
                         EasyLogger.Instance.WriteLog(new LogEntry
                         {
@@ -103,7 +112,9 @@ namespace EasySave.Strategies
                             SourceFilePath = sourceFile,
                             TargetFilePath = targetFile,
                             FileSize = fileSize,
-                            TransferTimeMs = transferTimeMs
+                            TransferTimeMs = transferTimeMs,
+                            EncryptionTimeMs = encryptionTime
+
                         });
                         jobContext.NotifyProgress();
                     }
@@ -115,6 +126,31 @@ namespace EasySave.Strategies
                     jobContext.FilesRemaining--;
                     jobContext.SizeRemaining -= fileSize;
                     jobContext.NotifyProgress();
+                }
+            }
+        }
+
+        private static void CopyFileWithControl(string sourceFile, string targetFile, BackupJob jobContext)
+        {
+            const int BufferSize = 1024 * 1024; // 1MB
+
+            using var source = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var target = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None);
+
+            byte[] buffer = new byte[BufferSize];
+            int read;
+
+            var notify = Stopwatch.StartNew();
+            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                jobContext.CheckPauseAndCancellation();
+                target.Write(buffer, 0, read);
+                jobContext.SizeRemaining -= read;
+
+                if (notify.ElapsedMilliseconds >= 100)
+                {
+                    jobContext.NotifyProgress();
+                    notify.Restart();
                 }
             }
         }

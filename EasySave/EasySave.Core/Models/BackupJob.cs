@@ -4,6 +4,8 @@ using EasySave.Core.Strategies;
 using EasySave.Strategies;
 using System;
 using System.IO;
+using System.Threading;
+using EasyLog;
 
 namespace EasySave.Models
 {
@@ -32,6 +34,8 @@ namespace EasySave.Models
         // Event used for the Observer pattern
         public event EventHandler ProgressUpdated;
 
+        private readonly ManualResetEventSlim _pauseGate = new ManualResetEventSlim(true);
+        private int _cancelRequested;
         // Encryption Service 
         public EncryptionService Encryption { get; set; }
         public string EncryptionKey { get; set; }
@@ -64,11 +68,11 @@ namespace EasySave.Models
         /// </summary>
         public void Execute()
         {
-            // ✅ CHECK #1 — before the backup starts
+            // CHECK #1 — before the backup starts
             if (Settings != null && BusinessService != null && BusinessService.IsBusinessSoftwareRunning(Settings.BusinessSoftwareName))
             {
                 string detected = BusinessService.GetDetectedSoftwareName(Settings.BusinessSoftwareName);
-                State = JobState.Error;
+                State = JobState.Cancelled;
                 FilesRemaining = 0;
                 SizeRemaining = 0;
 
@@ -117,10 +121,14 @@ namespace EasySave.Models
                 _strategy.ExecuteBackup(SourcePath, TargetPath, this);
 
                 // Only mark as completed if the strategy didn't encounter internal fatal errors
-                if (this.State != JobState.Error && this.State != JobState.Error)
+                if (this.State != JobState.Error && this.State != JobState.Cancelled)
                 {
                     this.State = JobState.Completed;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                this.State = JobState.Cancelled;
             }
             catch (Exception)
             {
@@ -128,6 +136,49 @@ namespace EasySave.Models
             }
             finally
             {
+                NotifyProgress();
+            }
+        }
+
+        public void RequestPause()
+        {
+            if (State != JobState.Active) return;
+            _pauseGate.Reset();
+            State = JobState.Paused;
+            NotifyProgress();
+        }
+
+        public void RequestResume()
+        {
+            if (State != JobState.Paused) return;
+            State = JobState.Active;
+            _pauseGate.Set();
+            NotifyProgress();
+        }
+
+        public void RequestCancel()
+        {
+            Interlocked.Exchange(ref _cancelRequested, 1);
+            _pauseGate.Set(); // unblock if paused
+            State = JobState.Cancelled;
+            NotifyProgress();
+        }
+
+        internal void CheckPauseAndCancellation()
+        {
+            if (Volatile.Read(ref _cancelRequested) == 1)
+                throw new OperationCanceledException();
+
+            if (!_pauseGate.IsSet)
+            {
+                State = JobState.Paused;
+                NotifyProgress();
+                _pauseGate.Wait();
+
+                if (Volatile.Read(ref _cancelRequested) == 1)
+                    throw new OperationCanceledException();
+
+                State = JobState.Active;
                 NotifyProgress();
             }
         }
