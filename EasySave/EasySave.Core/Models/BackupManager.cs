@@ -111,10 +111,6 @@ namespace EasySave.Models
         /// </summary>
         public bool CreateJob(string name, string source, string target, bool isDifferential)
         {
-            if (_jobs.Count >= 5)
-            {
-                return false; // Limit reached
-            }
 
             // Assign the strategy based on the type
             IBackupStrategy strategy = isDifferential
