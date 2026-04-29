@@ -17,23 +17,27 @@ public class EncryptionService
         return _targetExtensions.Contains(extension);
     }
 
-    public int Encrypt(string source, string target, string key)
+    public long Encrypt( string target, string key)
     {
-        // On ne lance le processus que si le fichier doit être crypté
-        if (!ShouldEncrypt(source)) return 0;
+        if (string.IsNullOrEmpty(key)) return 0;
 
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = _cryptoSoftPath,
-            Arguments = $"\"{source}\" \"{target}\" \"{key}\"",
+            Arguments = $"\"{target}\" \"{key}\"",
             CreateNoWindow = true,
             UseShellExecute = false
         };
 
+
         using (Process p = Process.Start(startInfo))
         {
+            if (p == null) return -1;
+
             p.WaitForExit();
-            return p.ExitCode; // CryptoSoft peut retourner le temps de cryptage ou un code d'erreur
+
+            // Capture the ElapsedMilliseconds returned by CryptoSoft's Environment.Exit()
+            return (long)p.ExitCode;
         }
     }
 }
