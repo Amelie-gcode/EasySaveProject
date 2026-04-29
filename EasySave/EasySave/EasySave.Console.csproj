@@ -2,14 +2,24 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EasyLog\EasyLog.csproj" />
     <ProjectReference Include="..\EasySave.Core\EasySave.Core.csproj" />
+    <ProjectReference Include="..\EasySave.WPF\EasySave.WPF.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Needed because LocalizationManager loads these JSON from the executable output folder. -->
+    <None Include="..\EasySave.Core\Resources\string-en.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-en.json" />
+    <None Include="..\EasySave.Core\Resources\string-fr.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-fr.json" />
+    <None Include="..\EasySave.Core\Resources\string-es.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-es.json" />
+    <None Include="..\EasySave.Core\Resources\string-ar.json" CopyToOutputDirectory="PreserveNewest" TargetPath="Resources\string-ar.json" />
   </ItemGroup>
 
 </Project>

@@ -45,5 +45,25 @@
   "MsgFeatureNotImplemented": "This feature is not implemented yet. Please check for updates in the future.",
   "ErrorInvalidSettingOption": "Invalid option selected. Please try again.",
   "MsgLogTypeChanged": "Log format successfully changed."
+  ,
+  "GuiLanguage": "Language",
+  "GuiJobEditor": "Job editor",
+  "GuiBrowse": "Browse...",
+  "GuiSelectFolder": "Select a folder",
+  "GuiDifferentialBackup": "Differential backup",
+  "GuiCreate": "Create",
+  "GuiModify": "Modify",
+  "GuiDelete": "Delete",
+  "GuiExecuteChecked": "Execute checked",
+  "GuiExecuteAll": "Execute all",
+  "GuiPause": "Pause",
+  "GuiResume": "Resume",
+  "GuiCancel": "Cancel",
+  "StateInactive": "Inactive",
+  "StateActive": "Active",
+  "StatePaused": "Paused",
+  "StateCompleted": "Completed",
+  "StateCancelled": "Cancelled",
+  "StateError": "Error"
 
 }
