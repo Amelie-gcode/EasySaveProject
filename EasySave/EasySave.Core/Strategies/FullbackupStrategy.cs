@@ -26,6 +26,7 @@ namespace EasySave.Strategies
 
                 long fileSize = new FileInfo(sourceFile).Length;
                 Stopwatch stopwatch = Stopwatch.StartNew();
+                long encryptionTime = 0;
 
                 try
                 {
@@ -37,19 +38,20 @@ namespace EasySave.Strategies
                     jobContext.NotifyProgress();
                     if (jobContext.Encryption.ShouldEncrypt(sourceFile))
                     {
-                        jobContext.Encryption.Encrypt(sourceFile, targetFile, jobContext.EncryptionKey);
+                        File.Copy(sourceFile, targetFile, true);
+                        encryptionTime = jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey);
                     }
                     else
                     {
                         File.Copy(sourceFile, targetFile, true);
+
                     }
                     stopwatch.Stop();
 
                     // 3. Update Progress Counters immediately after success
                     jobContext.FilesRemaining--;
                     jobContext.SizeRemaining -= fileSize;
-                    // The JobContext.NotifyProgress() logic should recalculate 
-                    // Progress = (Total - Remaining) / Total
+                    
                 }
                 catch (Exception ex)
                 {
@@ -64,7 +66,9 @@ namespace EasySave.Strategies
                         SourceFilePath = sourceFile,
                         TargetFilePath = targetFile,
                         FileSize = fileSize,
-                        TransferTimeMs = stopwatch.ElapsedMilliseconds
+                        TransferTimeMs = stopwatch.ElapsedMilliseconds,
+                        EncryptionTimeMs = encryptionTime
+
                     });
 
                     // Final notification for this file iteration
