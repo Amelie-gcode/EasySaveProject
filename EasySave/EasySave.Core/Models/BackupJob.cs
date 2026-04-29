@@ -31,6 +31,10 @@ namespace EasySave.Models
         // Event used for the Observer pattern
         public event EventHandler ProgressUpdated;
 
+        // Encryption Service 
+        public EncryptionService Encryption { get; set; }
+        public string EncryptionKey { get; set; }
+
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {
             Name = name;

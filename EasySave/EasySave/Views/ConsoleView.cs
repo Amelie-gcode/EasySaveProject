@@ -129,6 +129,7 @@ namespace EasySave.Views
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption1"));
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption2"));
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption3"));
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption4"));
             Console.WriteLine();
             Console.Write(_viewModel.GetString("PromptSelectSettingToChange"));
             string input = ReadUserInput();
@@ -143,9 +144,11 @@ namespace EasySave.Views
                     break;
                 case "3":
                     // Change encrypted extensions menu would go here
-                    Console.WriteLine();
-                    Console.WriteLine(_viewModel.GetString("MsgFeatureNotImplemented"));
-                    Console.ReadKey();
+                    ChangeExtension();
+                    
+                    break;
+                case "4":
+                    ChangeKeyEncryption();
                     break;
                 // Cases for other settings would go here
                 default:
@@ -165,6 +168,42 @@ namespace EasySave.Views
                 _viewModel.ChangeLogFormatCommand(input);
                 // This message will now print in the newly selected type!
                 Console.WriteLine(_viewModel.GetString("MsgLogTypeChanged"));
+            }
+            Console.ReadKey();
+        }
+        private void ChangeExtension()
+        {
+            Console.Write("Enter new extensions to encrypt (comma-separated) / Entrez les nouvelles extensions à crypter (séparées par des virgules) : ");
+            string input = ReadUserInput();
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                string[] extensions = input.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < extensions.Length; i++)
+                {
+                    extensions[i] = extensions[i].Trim().StartsWith(".") ? extensions[i].Trim() : "." + extensions[i].Trim();
+                }
+                _viewModel.ChangeEncryptedExtensionsCommand(extensions);
+                Console.WriteLine(_viewModel.GetString("MsgEncryptedExtensionsChanged"));
+            }
+            else
+            {
+                Console.WriteLine(_viewModel.GetString("ErrorInvalidExtensions"));
+            }
+            Console.ReadKey();
+        }
+
+        private void ChangeKeyEncryption()
+        {
+            Console.Write("Enter new encryption key / Entrez la nouvelle clé de cryptage : ");
+            string input = ReadUserInput();
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                _viewModel.ChangeEncryptionKeyCommand(input);
+                Console.WriteLine(_viewModel.GetString("MsgEncryptionKeyChanged"));
+            }
+            else
+            {
+                Console.WriteLine(_viewModel.GetString("ErrorInvalidEncryptionKey"));
             }
             Console.ReadKey();
         }

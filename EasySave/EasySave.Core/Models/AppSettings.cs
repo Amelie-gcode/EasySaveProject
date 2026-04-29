@@ -14,6 +14,10 @@ namespace EasySave.Models
         // List of file extensions that should be encrypted by CryptoSoft for Version 2.0
         public List<string> EncryptedExtensions { get; set; } = new List<string> { ".txt", ".docx", ".pdf" };
 
+        public string CryptoSoftPath { get; set; } = @"C:\Users\ameli\Documents\A3\Software\project\EasySave\External\CryptoSoft\CryptoSoft.exe";
+
+        public string EncryptionKey { get; set; } = "default";
+
         // The name of the business software that blocks backups for Version 2.0
         public string BusinessSoftwareName { get; set; } = "calculator";
     }

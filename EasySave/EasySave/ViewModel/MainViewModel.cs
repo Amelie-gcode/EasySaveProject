@@ -1,4 +1,5 @@
-﻿using EasyLog;
+﻿using EasySave;
+using EasyLog;
 using EasySave.Models;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,8 @@ namespace EasySave.ViewModel
         private readonly BackupManager _backupManager;
         private readonly SettingsManager _settingsManager;
         private AppSettings _currentSettings;
+
+        
         /// <summary>
         /// Gets the list of currently configured backup jobs.
         /// </summary>
@@ -24,6 +27,7 @@ namespace EasySave.ViewModel
             _settingsManager = new SettingsManager();
             _currentSettings = _settingsManager.LoadSettings();
 
+         
             //First Save to ensure the file exists for future updates (e.g., language changes)
             _settingsManager.SaveSettings(_currentSettings);
             // Apply the saved language choice immediately
@@ -95,7 +99,19 @@ namespace EasySave.ViewModel
             // Persist the choice to disk
             _settingsManager.SaveSettings(_currentSettings);
         }
+        public void ChangeEncryptionKeyCommand(string key)
+        {
+            _currentSettings.EncryptionKey = key;
+            // Persist the choice to disk
+            _settingsManager.SaveSettings(_currentSettings);
+        }
 
+        public void ChangeEncryptedExtensionsCommand(string[] extensions)
+        {
+            _currentSettings.EncryptedExtensions = new List<string>();
+            // Persist the choice to disk
+            _settingsManager.SaveSettings(_currentSettings);
+        }
         public void ChangeLogFormatCommand(string format)
         {
             _currentSettings.LogFormat = format.ToUpper();

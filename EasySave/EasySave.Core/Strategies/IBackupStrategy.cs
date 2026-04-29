@@ -5,6 +5,7 @@ using System.Text;
 
 namespace EasySave.Strategies
 {
+
         /// Contract that every backup strategy must implement.
         /// This is the Strategy Pattern — BackupJob works with any
         /// strategy without knowing its details.

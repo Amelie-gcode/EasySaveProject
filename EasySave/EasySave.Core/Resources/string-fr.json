@@ -40,6 +40,7 @@
   "MenuChangeSettingsOption1": "1. Changer la langue de l'application (EN/FR)",
   "MenuChangeSettingsOption2": "2. Changer le format du journal (JSON, XML)",
   "MenuChangeSettingsOption3": "3. Changer le chiffrement des fichiers .extension",
+  "MenuChangeSettingsOption4": "4. Changer le chiffrement de la clé",
   "PromptSelectSettingToChange": "Sélectionnez le paramètre que vous souhaitez changer : ",
   "MsgFeatureNotImplemented": "Cette fonctionnalité n'est pas encore implémentée. Veuillez vérifier les mises à jour à l'avenir.",
   "ErrorInvalidSettingOption": "Option invalide sélectionnée. Veuillez réessayer.",
