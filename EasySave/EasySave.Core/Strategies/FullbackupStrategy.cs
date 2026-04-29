@@ -35,8 +35,14 @@ namespace EasySave.Strategies
 
                     // Notify state that we are starting this specific file
                     jobContext.NotifyProgress();
-
-                    File.Copy(sourceFile, targetFile, true);
+                    if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+                    {
+                        jobContext.Encryption.Encrypt(sourceFile, targetFile, jobContext.EncryptionKey);
+                    }
+                    else
+                    {
+                        File.Copy(sourceFile, targetFile, true);
+                    }
                     stopwatch.Stop();
 
                     // 3. Update Progress Counters immediately after success

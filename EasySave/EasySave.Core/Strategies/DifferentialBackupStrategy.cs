@@ -50,7 +50,14 @@ namespace EasySave.Strategies
                         jobContext.CurrentTargetFile = targetFile;
 
                         stopwatch.Start();
-                        File.Copy(sourceFile, targetFile, true);
+                        if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+                        {
+                            jobContext.Encryption.Encrypt(sourceFile, targetFile, jobContext.EncryptionKey);
+                        }
+                        else
+                        {
+                            File.Copy(sourceFile, targetFile, true);
+                        }
                         stopwatch.Stop();
                         jobContext.NotifyProgress();
                         transferTimeMs = stopwatch.ElapsedMilliseconds;
