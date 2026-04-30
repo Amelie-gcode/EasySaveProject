@@ -248,7 +248,7 @@ namespace EasySave.WPF
             _selectedLanguage = LocalizationManager.Instance.CurrentLanguage;
             _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
             _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
-            _businessSoftwareInput = _currentSettings.BusinessSoftwareName ?? string.Empty;
+            _businessSoftwareInput = string.Join(", ", _currentSettings.BusinessSoftwareName ?? new System.Collections.Generic.List<string>());
             _encryptionKeyInput = _currentSettings.EncryptionKey ?? string.Empty;
 
             _backupManager = new BackupManager();
@@ -514,7 +514,7 @@ namespace EasySave.WPF
             _currentSettings.LogFormat = SelectedLogFormat;
             _currentSettings.EncryptionKey = string.IsNullOrWhiteSpace(EncryptionKeyInput) ? "default" : EncryptionKeyInput.Trim();
             _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
-            _currentSettings.BusinessSoftwareName = (BusinessSoftwareInput ?? string.Empty).Trim();
+            _currentSettings.BusinessSoftwareName = ParseCsvList(BusinessSoftwareInput, ensureDotPrefix: false);
             _settingsManager.SaveSettings(_currentSettings);
             ApplyLanguage(SelectedLanguage);
         }

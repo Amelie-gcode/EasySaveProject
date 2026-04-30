@@ -22,6 +22,11 @@ namespace EasySave.Models
 
             _settingsFilePath = Path.Combine(directory, "appsettings.json");
         }
+        // Constructor with a custom path for testing purposes
+        public SettingsManager(string customPath)
+        {
+            _settingsFilePath = customPath;
+        }
 
         public AppSettings LoadSettings()
         {
