@@ -25,6 +25,11 @@ namespace EasySave.WPF
         private string _targetPath = string.Empty;
         private bool _isDifferential;
         private string _selectedLanguage = "EN";
+        private string _selectedLogFormat = "JSON";
+        private string _encryptedExtensionsInput = string.Empty;
+        private string _businessSoftwareInput = string.Empty;
+        private string _encryptionKeyInput = string.Empty;
+        private bool _isModifyPanelOpen;
 
         public ObservableCollection<JobViewModel> Jobs { get; } = new ObservableCollection<JobViewModel>();
 
@@ -62,7 +67,64 @@ namespace EasySave.WPF
                 if (_selectedLanguage == normalized) return;
                 _selectedLanguage = normalized;
                 OnPropertyChanged();
-                ApplyLanguage(normalized);
+            }
+        }
+
+        public string SelectedLogFormat
+        {
+            get => _selectedLogFormat;
+            set
+            {
+                var normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
+                if (normalized != "JSON" && normalized != "XML")
+                    normalized = "JSON";
+                if (_selectedLogFormat == normalized) return;
+                _selectedLogFormat = normalized;
+                OnPropertyChanged();
+            }
+        }
+
+        public string EncryptedExtensionsInput
+        {
+            get => _encryptedExtensionsInput;
+            set
+            {
+                if (_encryptedExtensionsInput == value) return;
+                _encryptedExtensionsInput = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string BusinessSoftwareInput
+        {
+            get => _businessSoftwareInput;
+            set
+            {
+                if (_businessSoftwareInput == value) return;
+                _businessSoftwareInput = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string EncryptionKeyInput
+        {
+            get => _encryptionKeyInput;
+            set
+            {
+                if (_encryptionKeyInput == value) return;
+                _encryptionKeyInput = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool IsModifyPanelOpen
+        {
+            get => _isModifyPanelOpen;
+            set
+            {
+                if (_isModifyPanelOpen == value) return;
+                _isModifyPanelOpen = value;
+                OnPropertyChanged();
             }
         }
 
@@ -77,6 +139,16 @@ namespace EasySave.WPF
         public string ExecuteCheckedText => LocalizationManager.Instance.GetString("GuiExecuteChecked");
         public string ExecuteAllText => LocalizationManager.Instance.GetString("GuiExecuteAll");
         public string CancelText => LocalizationManager.Instance.GetString("GuiCancel");
+        public string SaveText => LocalizationManager.Instance.GetString("GuiSave");
+        public string SettingsTitleText => LocalizationManager.Instance.GetString("GuiSettings");
+        public string JobNameHeaderText => LocalizationManager.Instance.GetString("GuiJobName");
+        public string SourceHeaderText => LocalizationManager.Instance.GetString("LabelSource");
+        public string TargetHeaderText => LocalizationManager.Instance.GetString("LabelTarget");
+        public string SettingsLanguageText => LocalizationManager.Instance.GetString("GuiSettingsLanguage");
+        public string SettingsLogFormatText => LocalizationManager.Instance.GetString("GuiSettingsLogFormat");
+        public string SettingsExtensionsText => LocalizationManager.Instance.GetString("GuiSettingsExtensions");
+        public string SettingsBlockingAppsText => LocalizationManager.Instance.GetString("GuiSettingsBlockingApps");
+        public string SettingsEncryptionKeyText => LocalizationManager.Instance.GetString("GuiSettingsEncryptionKey");
 
         public string LabelNameText => LocalizationManager.Instance.GetString("LabelName");
         public string LabelSourceText => LocalizationManager.Instance.GetString("LabelSource");
@@ -157,6 +229,11 @@ namespace EasySave.WPF
         public ICommand ModifySelectedJobCommand { get; }
         public ICommand BrowseSourceCommand { get; }
         public ICommand BrowseTargetCommand { get; }
+        public ICommand SaveSettingsCommand { get; }
+        public ICommand DeleteJobCommand { get; }
+        public ICommand ModifyJobCommand { get; }
+        public ICommand OpenModifyPanelCommand { get; }
+        public ICommand CloseModifyPanelCommand { get; }
 
         public MainViewModel()
         {
@@ -169,6 +246,10 @@ namespace EasySave.WPF
             // Apply language to all string lookups.
             LocalizationManager.Instance.SetLanguage(_currentSettings.Language);
             _selectedLanguage = LocalizationManager.Instance.CurrentLanguage;
+            _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
+            _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
+            _businessSoftwareInput = _currentSettings.BusinessSoftwareName ?? string.Empty;
+            _encryptionKeyInput = _currentSettings.EncryptionKey ?? string.Empty;
 
             _backupManager = new BackupManager();
 
@@ -205,6 +286,26 @@ namespace EasySave.WPF
             ModifySelectedJobCommand = new AsyncRelayCommand(
                 execute: ModifySelectedJobAsync,
                 canExecute: CanModifySelectedJob);
+
+            SaveSettingsCommand = new RelayCommand(
+                execute: SaveSettings,
+                canExecute: () => !IsBusy);
+
+            DeleteJobCommand = new AsyncRelayCommand(
+                execute: DeleteJobAsync,
+                canExecute: parameter => parameter is JobViewModel && !IsBusy);
+
+            ModifyJobCommand = new AsyncRelayCommand(
+                execute: ModifyJobAsync,
+                canExecute: parameter => parameter is JobViewModel && !IsBusy && HasValidJobInputs());
+
+            OpenModifyPanelCommand = new RelayCommand(
+                execute: OpenModifyPanel,
+                canExecute: parameter => parameter is JobViewModel && !IsBusy);
+
+            CloseModifyPanelCommand = new RelayCommand(
+                execute: () => IsModifyPanelOpen = false,
+                canExecute: () => !IsBusy);
         }
 
         private void LoadJobs()
@@ -237,6 +338,11 @@ namespace EasySave.WPF
             (DeleteSelectedJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             (ModifySelectedJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             (CreateJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (DeleteJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (ModifyJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (SaveSettingsCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (OpenModifyPanelCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            (CloseModifyPanelCommand as RelayCommand)?.RaiseCanExecuteChanged();
         }
 
         private bool HasValidJobInputs()
@@ -254,6 +360,7 @@ namespace EasySave.WPF
         {
             (CreateJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
             (ModifySelectedJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
+            (ModifyJobCommand as AsyncRelayCommand)?.RaiseCanExecuteChanged();
         }
 
         private void ApplyLanguage(string langCode)
@@ -273,10 +380,25 @@ namespace EasySave.WPF
             OnPropertyChanged(nameof(ExecuteCheckedText));
             OnPropertyChanged(nameof(ExecuteAllText));
             OnPropertyChanged(nameof(CancelText));
+            OnPropertyChanged(nameof(SaveText));
+            OnPropertyChanged(nameof(SettingsTitleText));
+            OnPropertyChanged(nameof(JobNameHeaderText));
+            OnPropertyChanged(nameof(SourceHeaderText));
+            OnPropertyChanged(nameof(TargetHeaderText));
+            OnPropertyChanged(nameof(SettingsLanguageText));
+            OnPropertyChanged(nameof(SettingsLogFormatText));
+            OnPropertyChanged(nameof(SettingsExtensionsText));
+            OnPropertyChanged(nameof(SettingsBlockingAppsText));
+            OnPropertyChanged(nameof(SettingsEncryptionKeyText));
             OnPropertyChanged(nameof(LabelNameText));
             OnPropertyChanged(nameof(LabelSourceText));
             OnPropertyChanged(nameof(LabelTargetText));
             OnPropertyChanged(nameof(LabelStateText));
+
+            foreach (var job in Jobs)
+            {
+                job.RefreshLocalizedTexts();
+            }
         }
 
         private void BrowseAndSetPath(bool isSource)
@@ -343,6 +465,13 @@ namespace EasySave.WPF
             }
         }
 
+        private async Task DeleteJobAsync(object? parameter)
+        {
+            if (parameter is not JobViewModel job) return;
+            SelectedJob = job;
+            await DeleteSelectedJobAsync();
+        }
+
         private async Task ModifySelectedJobAsync()
         {
             if (SelectedJob == null) return;
@@ -357,8 +486,48 @@ namespace EasySave.WPF
             finally
             {
                 IsBusy = false;
-                _dispatcher.Invoke(LoadJobs);
+                _dispatcher.Invoke(() =>
+                {
+                    LoadJobs();
+                    IsModifyPanelOpen = false;
+                });
             }
+        }
+
+        private async Task ModifyJobAsync(object? parameter)
+        {
+            if (parameter is not JobViewModel job) return;
+            SelectedJob = job;
+            await ModifySelectedJobAsync();
+        }
+
+        private void OpenModifyPanel(object? parameter)
+        {
+            if (parameter is not JobViewModel job) return;
+            SelectedJob = job;
+            IsModifyPanelOpen = true;
+        }
+
+        private void SaveSettings()
+        {
+            _currentSettings.Language = SelectedLanguage;
+            _currentSettings.LogFormat = SelectedLogFormat;
+            _currentSettings.EncryptionKey = string.IsNullOrWhiteSpace(EncryptionKeyInput) ? "default" : EncryptionKeyInput.Trim();
+            _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
+            _currentSettings.BusinessSoftwareName = (BusinessSoftwareInput ?? string.Empty).Trim();
+            _settingsManager.SaveSettings(_currentSettings);
+            ApplyLanguage(SelectedLanguage);
+        }
+
+        private static System.Collections.Generic.List<string> ParseCsvList(string? input, bool ensureDotPrefix)
+        {
+            return (input ?? string.Empty)
+                .Split(',')
+                .Select(part => part.Trim())
+                .Where(part => !string.IsNullOrWhiteSpace(part))
+                .Select(part => ensureDotPrefix && !part.StartsWith(".") ? "." + part : part)
+                .Distinct(System.StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private async Task ExecuteSelectedJobAsync()
@@ -547,6 +716,13 @@ namespace EasySave.WPF
             public void Detach()
             {
                 _job.ProgressUpdated -= _progressHandler;
+            }
+
+            public void RefreshLocalizedTexts()
+            {
+                OnPropertyChanged(nameof(StateText));
+                OnPropertyChanged(nameof(PauseResumeText));
+                OnPropertyChanged(nameof(CancelText));
             }
 
             public event PropertyChangedEventHandler? PropertyChanged;

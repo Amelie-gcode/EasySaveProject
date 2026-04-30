@@ -11,6 +11,9 @@ namespace EasySave.Models
         // The preferred log format for Version 1.1 (e.g., "JSON" or "XML")
         public string LogFormat { get; set; } = "JSON";
 
+        // Preferred visual mode for the UI ("Claire" or "Sombre").
+        public string ThemeMode { get; set; } = "Claire";
+
         // List of file extensions that should be encrypted by CryptoSoft for Version 2.0
         public List<string> EncryptedExtensions { get; set; } = new List<string> { ".txt", ".docx", ".pdf" };
 

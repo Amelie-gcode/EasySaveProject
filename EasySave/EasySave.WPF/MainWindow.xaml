@@ -5,183 +5,281 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:EasySave.WPF"
         mc:Ignorable="d"
-        Title="EasySave" Height="540" Width="980" MinHeight="520" MinWidth="940">
+        Title="EasySave" Height="540" Width="980" MinHeight="520" MinWidth="940"
+        Background="#F5F7FB">
     <Grid Margin="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        <TabControl Background="#FFFFFF" BorderBrush="#B8C3D9">
+            <TabItem Header="Create">
+                <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Margin="8" Background="#FFFFFF">
+                    <StackPanel>
+                        <TextBlock Text="{Binding CreateText}" FontSize="18" FontWeight="SemiBold" Foreground="#2D6CDF" Margin="0,0,0,12" />
 
-        <Grid Grid.Row="0" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding JobNameHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                        <TextBox Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
 
-            <StackPanel Grid.Column="0">
-                <TextBlock Text="EasySave" FontSize="20" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding MenuTitleText}" FontSize="12" Opacity="0.75" />
-            </StackPanel>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{Binding LanguageLabelText}" VerticalAlignment="Center" Margin="0,0,8,0" Opacity="0.8"/>
-                <ComboBox Width="120"
-                          SelectedValue="{Binding SelectedLanguage}"
-                          SelectedValuePath="Tag">
-                    <ComboBoxItem Content="English" Tag="EN" />
-                    <ComboBoxItem Content="Français" Tag="FR" />
-                    <ComboBoxItem Content="Español" Tag="ES" />
-                    <ComboBoxItem Content="العربية" Tag="AR" />
-                </ComboBox>
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="1" Margin="0,0,0,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <ListBox Grid.Column="0"
-                     ItemsSource="{Binding Jobs}"
-                     SelectedItem="{Binding SelectedJob}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Border BorderBrush="#444" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <CheckBox Grid.Column="0"
-                                          VerticalAlignment="Top"
-                                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
-                                          Margin="0,2,0,0"/>
-
-                                <Grid Grid.Column="2">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Grid.Column="0">
-                                        <DockPanel LastChildFill="True">
-                                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" DockPanel.Dock="Left" />
-                                            <TextBlock Text="{Binding StateText}" FontStyle="Italic" FontSize="12" HorizontalAlignment="Right" />
-                                        </DockPanel>
-
-                                        <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}"
-                                                     Height="12"
-                                                     Minimum="0"
-                                                     Maximum="100"
-                                                     Margin="0,6,8,0"
-                                                     Foreground="LimeGreen"
-                                                     Background="#1F1F1F" />
-
-                                        <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"/>
-                                        <TextBlock Text="{Binding TargetPath}" TextWrapping="Wrap" FontSize="12" />
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right" Margin="14,0,0,0">
-                                        <StackPanel.Style>
-                                            <Style TargetType="StackPanel">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding ShowControls}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </StackPanel.Style>
-
-                                        <Button Content="{Binding PauseResumeText}"
-                                                Command="{Binding PauseResumeCommand}"
-                                                Width="84"
-                                                Padding="8,3"
-                                                Margin="0,0,0,6" />
-                                        <Button Content="{Binding CancelText}"
-                                                Command="{Binding CancelCommand}"
-                                                Width="84"
-                                                Padding="8,3" />
-                                    </StackPanel>
-                                </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-
-            <Border Grid.Column="2" BorderBrush="#333" BorderThickness="1" CornerRadius="6" Padding="12">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Text="{Binding JobEditorTitleText}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" />
-
-                    <StackPanel Grid.Row="1" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding LabelNameText}" />
-                        <TextBox Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="2" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding LabelSourceText}" />
-                        <DockPanel LastChildFill="True">
-                            <Button Content="{Binding BrowseText}" Command="{Binding BrowseSourceCommand}" Width="78" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
+                        <TextBlock Text="{Binding SourceHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                        <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                            <Button Content="{Binding BrowseText}" Command="{Binding BrowseSourceCommand}" Width="90" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
                             <TextBox Text="{Binding SourcePath, UpdateSourceTrigger=PropertyChanged}" />
                         </DockPanel>
-                    </StackPanel>
 
-                    <StackPanel Grid.Row="3" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding LabelTargetText}" />
-                        <DockPanel LastChildFill="True">
-                            <Button Content="{Binding BrowseText}" Command="{Binding BrowseTargetCommand}" Width="78" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
+                        <TextBlock Text="{Binding TargetHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                        <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                            <Button Content="{Binding BrowseText}" Command="{Binding BrowseTargetCommand}" Width="90" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
                             <TextBox Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}" />
                         </DockPanel>
-                    </StackPanel>
 
-                    <CheckBox Grid.Row="4" Content="{Binding DifferentialBackupText}" IsChecked="{Binding IsDifferential}" Margin="0,0,0,14" />
+                        <CheckBox Content="{Binding DifferentialBackupText}" IsChecked="{Binding IsDifferential}" Margin="0,0,0,12" />
 
-                    <StackPanel Grid.Row="5" Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="{Binding CreateText}"
                                 Command="{Binding CreateJobCommand}"
-                                Width="76"
-                                Padding="10,4"
-                                Margin="0,0,8,0" />
-                        <Button Content="{Binding ModifyText}"
-                                Command="{Binding ModifySelectedJobCommand}"
-                                Width="76"
-                                Padding="10,4"
-                                Margin="0,0,8,0" />
-                        <Button Content="{Binding DeleteText}"
-                                Command="{Binding DeleteSelectedJobCommand}"
-                                Width="76"
-                                Padding="10,4" />
+                                Width="120"
+                                Padding="10,6"
+                                HorizontalAlignment="Left"
+                                Background="#2D6CDF"
+                                Foreground="White"
+                                BorderBrush="#2D6CDF" />
                     </StackPanel>
-                </Grid>
-            </Border>
-        </Grid>
+                </Border>
+            </TabItem>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{Binding ExecuteCheckedText}"
-                    Command="{Binding ExecuteCheckedJobsCommand}"
-                    Width="140"
-                    Margin="0,0,8,0"
-                    />
-            <Button Content="{Binding ExecuteAllText}"
-                    Command="{Binding ExecuteAllJobsCommand}"
-                    Width="140"
-                    Margin="0,0,8,0"
-                    />
-        </StackPanel>
+            <TabItem Header="Jobs">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <ListBox Grid.Row="0"
+                                 ItemsSource="{Binding Jobs}"
+                                 SelectedItem="{Binding SelectedJob}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="#D2DAE8" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,0,8" Background="#FFFFFF">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="10"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0"
+                                                      VerticalAlignment="Top"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      Margin="0,2,0,0"/>
+
+                                            <Grid Grid.Column="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0">
+                                                    <DockPanel LastChildFill="True">
+                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" DockPanel.Dock="Left" />
+                                                        <TextBlock Text="{Binding StateText}" FontStyle="Italic" FontSize="12" HorizontalAlignment="Right" />
+                                                    </DockPanel>
+
+                                                    <ProgressBar Value="{Binding ProgressPercent, Mode=OneWay}"
+                                                                 Height="12"
+                                                                 Minimum="0"
+                                                                 Maximum="100"
+                                                                 Margin="0,6,8,0"
+                                                                 Foreground="LimeGreen"
+                                                                 Background="#1F1F1F" />
+
+                                                    <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="{Binding TargetPath}" TextWrapping="Wrap" FontSize="12" />
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right" Margin="14,0,0,0">
+                                                    <Button Content="{Binding DataContext.ModifyText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Command="{Binding DataContext.OpenModifyPanelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Width="84"
+                                                            Padding="8,3"
+                                                            Margin="0,0,0,8"
+                                                            Background="#FFF4CC"
+                                                            BorderBrush="#F0C75E" />
+
+                                                    <Button Content="{Binding DataContext.DeleteText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            Command="{Binding DataContext.DeleteJobCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Width="84"
+                                                            Padding="8,3"
+                                                            Margin="0,0,0,12"
+                                                            Background="#FFE2E2"
+                                                            BorderBrush="#E58A8A" />
+
+                                                    <Button Content="{Binding PauseResumeText}"
+                                                            Command="{Binding PauseResumeCommand}"
+                                                            Width="84"
+                                                            Padding="8,3"
+                                                            Margin="0,0,0,6">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ShowControls}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+
+                                                    <Button Content="{Binding CancelText}"
+                                                            Command="{Binding CancelCommand}"
+                                                            Width="84"
+                                                            Padding="8,3">
+                                                        <Button.Style>
+                                                            <Style TargetType="Button">
+                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding ShowControls}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Button.Style>
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                            <Button Content="{Binding ExecuteCheckedText}"
+                                    Command="{Binding ExecuteCheckedJobsCommand}"
+                                    Width="140"
+                                    Margin="0,0,8,0" />
+                            <Button Content="{Binding ExecuteAllText}"
+                                    Command="{Binding ExecuteAllJobsCommand}"
+                                    Width="140" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Grid.Column="2" BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Background="#FFFFFF">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsModifyPanelOpen}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <StackPanel>
+                            <DockPanel LastChildFill="False" Margin="0,0,0,8">
+                                <TextBlock Text="{Binding ModifyText}" FontSize="16" FontWeight="SemiBold" Foreground="#2D6CDF" DockPanel.Dock="Left" />
+                                <Button Content="X" Command="{Binding CloseModifyPanelCommand}" Width="28" Height="24" DockPanel.Dock="Right" />
+                            </DockPanel>
+
+                            <TextBlock Text="{Binding JobNameHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
+
+                            <TextBlock Text="{Binding SourceHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                                <Button Content="{Binding BrowseText}" Command="{Binding BrowseSourceCommand}" Width="90" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
+                                <TextBox Text="{Binding SourcePath, UpdateSourceTrigger=PropertyChanged}" />
+                            </DockPanel>
+
+                            <TextBlock Text="{Binding TargetHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <DockPanel LastChildFill="True" Margin="0,0,0,10">
+                                <Button Content="{Binding BrowseText}" Command="{Binding BrowseTargetCommand}" Width="90" Padding="8,3" Margin="0,0,8,0" DockPanel.Dock="Right" />
+                                <TextBox Text="{Binding TargetPath, UpdateSourceTrigger=PropertyChanged}" />
+                            </DockPanel>
+
+                            <CheckBox Content="{Binding DifferentialBackupText}" IsChecked="{Binding IsDifferential}" Margin="0,0,0,12" />
+
+                            <Button Content="{Binding ModifyText}"
+                                    Command="{Binding ModifySelectedJobCommand}"
+                                    Width="100"
+                                    Padding="8,4"
+                                    HorizontalAlignment="Right"
+                                    Background="#2D6CDF"
+                                    Foreground="White"
+                                    BorderBrush="#2D6CDF" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Settings">
+                <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Margin="8" Background="#FFFFFF">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="{Binding SettingsTitleText}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#2D6CDF" />
+
+                        <StackPanel Grid.Row="1" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding SettingsLanguageText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <ComboBox SelectedValue="{Binding SelectedLanguage}" SelectedValuePath="Tag">
+                                <ComboBoxItem Content="English" Tag="EN" />
+                                <ComboBoxItem Content="Français" Tag="FR" />
+                                <ComboBoxItem Content="Español" Tag="ES" />
+                                <ComboBoxItem Content="العربية" Tag="AR" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding SettingsLogFormatText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <ComboBox SelectedValue="{Binding SelectedLogFormat}" SelectedValuePath="Tag">
+                                <ComboBoxItem Content="JSON" Tag="JSON" />
+                                <ComboBoxItem Content="XML" Tag="XML" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding SettingsExtensionsText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding EncryptedExtensionsInput, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="4" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding SettingsBlockingAppsText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding BusinessSoftwareInput, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="5" Margin="0,0,0,12">
+                            <TextBlock Text="{Binding SettingsEncryptionKeyText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
+                            <TextBox Text="{Binding EncryptionKeyInput, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+
+                        <Button Grid.Row="6"
+                                Content="{Binding SaveText}"
+                                Command="{Binding SaveSettingsCommand}"
+                                Width="32"
+                                Height="22"
+                                Padding="0"
+                                HorizontalAlignment="Right"
+                                Background="#2D6CDF"
+                                Foreground="White"
+                                BorderBrush="#2D6CDF"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center" />
+                    </Grid>
+                </Border>
+            </TabItem>
+        </TabControl>
     </Grid>
 </Window>
