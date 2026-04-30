@@ -44,8 +44,7 @@
   "PromptSelectSettingToChange": "Select the setting you want to change: ",
   "MsgFeatureNotImplemented": "This feature is not implemented yet. Please check for updates in the future.",
   "ErrorInvalidSettingOption": "Invalid option selected. Please try again.",
-  "MsgLogTypeChanged": "Log format successfully changed."
-  ,
+  "MsgLogTypeChanged": "Log format successfully changed.",
   "GuiLanguage": "Language",
   "GuiJobEditor": "Job editor",
   "GuiBrowse": "Browse...",

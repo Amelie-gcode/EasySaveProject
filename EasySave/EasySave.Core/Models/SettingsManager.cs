@@ -55,6 +55,7 @@ namespace EasySave.Models
             try
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
+                settings.EncryptionKey = SecurityHelper.Protect(settings.EncryptionKey);
                 string jsonContent = JsonSerializer.Serialize(settings, options);
                 File.WriteAllText(_settingsFilePath, jsonContent);
             }

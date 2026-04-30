@@ -70,6 +70,7 @@ namespace EasySave.Models
             // We pass the ALREADY DECRYPTED key (handled by LoadSettings)
             job.Encryption = _encryptionService;
             job.EncryptionKey = settings.EncryptionKey;
+            job.Settings = settings;
 
             if (job.State == JobState.Active || job.State == JobState.Paused)
             {
@@ -110,10 +111,6 @@ namespace EasySave.Models
         /// </summary>
         public bool CreateJob(string name, string source, string target, bool isDifferential)
         {
-            if (_jobs.Count >= 5)
-            {
-                return false; // Limit reached
-            }
 
             // Assign the strategy based on the type
             IBackupStrategy strategy = isDifferential
