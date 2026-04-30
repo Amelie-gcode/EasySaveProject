@@ -46,14 +46,24 @@ namespace EasySave.Strategies
                 {
                     long transferTimeMs = -1;
                     Stopwatch stopwatch = new Stopwatch();
-
+                    long encryptionTime = 0;
                     try
                     {
                         jobContext.CurrentSourceFile = sourceFile;
                         jobContext.CurrentTargetFile = targetFile;
 
                         stopwatch.Start();
-                        CopyFileWithControl(sourceFile, targetFile, jobContext);
+                        
+                        if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+                        {
+                            CopyFileWithControl(sourceFile, targetFile, jobContext);
+                            encryptionTime =jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey);
+                        }
+                        else
+                        {
+                            CopyFileWithControl(sourceFile, targetFile, jobContext);
+
+                        }
                         stopwatch.Stop();
                         jobContext.NotifyProgress();
                         transferTimeMs = stopwatch.ElapsedMilliseconds;
@@ -77,7 +87,9 @@ namespace EasySave.Strategies
                             SourceFilePath = sourceFile,
                             TargetFilePath = targetFile,
                             FileSize = fileSize,
-                            TransferTimeMs = transferTimeMs
+                            TransferTimeMs = transferTimeMs,
+                            EncryptionTimeMs = encryptionTime
+
                         });
                         jobContext.NotifyProgress();
                     }

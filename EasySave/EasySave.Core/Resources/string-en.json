@@ -40,6 +40,7 @@
   "MenuChangeSettingsOption1": "1. Change Application Language (EN/FR)",
   "MenuChangeSettingsOption2": "2. Change Log Format (JSON, XML)",
   "MenuChangeSettingsOption3": "3. Change .extension file encryption",
+  "MenuChangeSettingsOption4": "4. Change Key Encryption",
   "PromptSelectSettingToChange": "Select the setting you want to change: ",
   "MsgFeatureNotImplemented": "This feature is not implemented yet. Please check for updates in the future.",
   "ErrorInvalidSettingOption": "Invalid option selected. Please try again.",

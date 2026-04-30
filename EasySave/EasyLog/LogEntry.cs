@@ -16,6 +16,8 @@ namespace EasyLog
 
         public long TransferTimeMs { get; set; }
 
+        // New property for encryption time
+        public long EncryptionTimeMs { get; set; }
         public LogEntry()
         {
             Timestamp = DateTime.UtcNow;

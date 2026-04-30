@@ -34,6 +34,9 @@ namespace EasySave.Models
 
         private readonly ManualResetEventSlim _pauseGate = new ManualResetEventSlim(true);
         private int _cancelRequested;
+        // Encryption Service 
+        public EncryptionService Encryption { get; set; }
+        public string EncryptionKey { get; set; }
 
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {

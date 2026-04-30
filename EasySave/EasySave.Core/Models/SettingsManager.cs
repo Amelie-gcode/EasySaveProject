@@ -34,7 +34,15 @@ namespace EasySave.Models
             try
             {
                 string json = File.ReadAllText(_settingsFilePath);
-                return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                AppSettings loadedSettings = JsonSerializer.Deserialize<AppSettings>(json);
+
+                if (loadedSettings != null)
+                {
+                    // On déchiffre la clé pour qu'elle soit utilisable par le programme
+                    loadedSettings.EncryptionKey = SecurityHelper.Unprotect(loadedSettings.EncryptionKey);
+                }
+
+                return loadedSettings;
             }
             catch
             {
