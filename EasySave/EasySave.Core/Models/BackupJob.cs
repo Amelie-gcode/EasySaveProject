@@ -66,7 +66,7 @@ namespace EasySave.Models
         /// <summary>
         /// Executes the backup job with pre-flight path validation.
         /// </summary>
-        public void Execute()
+        public async Task Execute()
         {
             // CHECK #1 — before the backup starts
             if (Settings != null && BusinessService != null && BusinessService.IsBusinessSoftwareRunning(Settings.BusinessSoftwareName))
@@ -117,8 +117,10 @@ namespace EasySave.Models
             // 3. EXECUTION: If both paths are valid, proceed with the Strategy
             try
             {
-                CalculateInitialStats(); // Gather totals for progress tracking
-                _strategy.ExecuteBackup(SourcePath, TargetPath, this);
+                // Offload the heavy scanning to a background thread to keep UI responsive
+                await Task.Run(() => CalculateInitialStats());
+                // CRITICAL: The Strategy must now be Awaited
+                await _strategy.ExecuteBackupAsync(SourcePath, TargetPath, this);
 
                 // Only mark as completed if the strategy didn't encounter internal fatal errors
                 if (this.State != JobState.Error && this.State != JobState.Cancelled)
