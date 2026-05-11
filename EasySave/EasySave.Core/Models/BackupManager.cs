@@ -48,7 +48,7 @@ namespace EasySave.Models
         /// Orchestrates the execution of a specific job by its ID.
         /// </summary>
         /// <param name="id">The index of the job (1-5).</param>
-        public void ExecuteJob(int id)
+        public async Task ExecuteJob(int id)
         {
             
             // IDs are 1-based for the user, but 0-based for the list index
@@ -96,16 +96,23 @@ namespace EasySave.Models
         }
 
         /// <summary>
-        /// Executes all configured backup jobs one after another.
+        /// Executes all configured backup jobs on parrallele.
         /// </summary>
-        public void ExecuteAll()
+        public async Task ExecuteAll()
         {
+            // Create a list of Tasks to represent all running jobs
+            List<Task> runningTasks = new List<Task>();
+
             for (int i = 1; i <= _jobs.Count; i++)
             {
-                ExecuteJob(i);
+                // We call ExecuteJob but do NOT 'await' it inside the loop.
+                // This launches all jobs simultaneously.
+                runningTasks.Add(ExecuteJob(i));
             }
-        }
 
+            // Wait for all backup jobs to finish in parallel
+            await Task.WhenAll(runningTasks);
+        }
         /// <summary>
         /// Creates and adds a new backup job to the list.
         /// </summary>

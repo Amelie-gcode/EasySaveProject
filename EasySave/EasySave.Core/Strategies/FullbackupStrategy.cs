@@ -12,37 +12,32 @@ namespace EasySave.Strategies
     /// Does not check if files already exist or are unchanged.
     public class FullBackupStrategy : IBackupStrategy
     {
-        public void ExecuteBackup(string sourceDir, string targetDir, BackupJob jobContext)
+        public async Task ExecuteBackupAsync(string sourceDir, string targetDir, BackupJob jobContext)
         {
-            // Retrieve all files in the source directory, including subdirectories
-            string[] files = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories);
+            // Offload file discovery to a background task
+            string[] files = await Task.Run(() => Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories));
 
             foreach (string sourceFile in files)
             {
-                // ✅ CHECK #2 — before each file, stop if business software just opened
-                if (jobContext.Settings != null &&
-                    jobContext.BusinessService.IsBusinessSoftwareRunning(
-                        jobContext.Settings.BusinessSoftwareName))
+                // Requirement: "Temporary pause if business software is detected"
+                // We use a loop to wait while the business software is open
+                while (jobContext.Settings != null && jobContext.BusinessService.IsBusinessSoftwareRunning(jobContext.Settings.BusinessSoftwareName))
                 {
-                    string detected = jobContext.BusinessService.GetDetectedSoftwareName(
-                        jobContext.Settings.BusinessSoftwareName);
-
-                    jobContext.State = JobState.Error;
-                    jobContext.CurrentSourceFile = $"BLOCKED by: {detected}";
-
+                    jobContext.State = JobState.Paused; // Visual feedback for user
+                    jobContext.NotifyProgress();
                     EasyLogger.Instance.WriteLog(new LogEntry
                     {
                         Timestamp = DateTime.Now,
                         BackupName = jobContext.Name,
-                        SourceFilePath = $"BLOCKED by: {detected}",
+                        SourceFilePath = $"BLOCKED by: {jobContext.BusinessService.GetDetectedSoftwareName(
+                        jobContext.Settings.BusinessSoftwareName)}",
                         TargetFilePath = string.Empty,
                         FileSize = 0,
                         TransferTimeMs = -1
                     });
-
-                    jobContext.NotifyProgress();
-                    return; // previous file already fully copied, next ones are skipped
+                    await Task.Delay(1000); // Poll every second
                 }
+
                 jobContext.CheckPauseAndCancellation();
 
                 // 1. Prepare paths
@@ -62,16 +57,18 @@ namespace EasySave.Strategies
 
                     // Notify state that we are starting this specific file
                     jobContext.NotifyProgress();
+
                     if (jobContext.Encryption.ShouldEncrypt(sourceFile))
                     {
-                        CopyFileWithControl(sourceFile, targetFile, jobContext);
-                        encryptionTime = jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey);
+                        await CopyFileAsync(sourceFile, targetFile, jobContext);
+                        // Encryption is usually an external process call (CryptoSoft)
+                        encryptionTime = await Task.Run(() => jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey));
                     }
                     else
                     {
-                        CopyFileWithControl(sourceFile, targetFile, jobContext);
+                        await CopyFileAsync(sourceFile, targetFile, jobContext);
 
-                    
+
                     }
                     stopwatch.Stop();
 
@@ -108,28 +105,25 @@ namespace EasySave.Strategies
                 
         }
 
-        private static void CopyFileWithControl(string sourceFile, string targetFile, BackupJob jobContext)
+        private async Task CopyFileAsync(string sourceFile, string targetFile, BackupJob jobContext)
         {
             const int BufferSize = 1024 * 1024; // 1MB
-
             using var source = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var target = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None);
 
             byte[] buffer = new byte[BufferSize];
             int read;
 
-            var notify = Stopwatch.StartNew();
-            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            while ((read = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
             {
+                // This allows the "Stop" button to work even mid-file
                 jobContext.CheckPauseAndCancellation();
-                target.Write(buffer, 0, read);
+
+                await target.WriteAsync(buffer, 0, read);
                 jobContext.SizeRemaining -= read;
 
-                if (notify.ElapsedMilliseconds >= 100)
-                {
-                    jobContext.NotifyProgress();
-                    notify.Restart();
-                }
+                // Optional: Throttle NotifyProgress to avoid UI flickering
+                // jobContext.NotifyProgress(); 
             }
         }
     }

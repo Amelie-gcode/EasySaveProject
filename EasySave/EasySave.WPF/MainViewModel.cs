@@ -1,8 +1,9 @@
 ﻿using EasySave.Models;
 using EasySave.Strategies;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -551,35 +552,46 @@ namespace EasySave.WPF
             try
             {
                 IsBusy = true;
-                await Task.Run(() => _backupManager.ExecuteAll());
+                // Call the refactored async version of ExecuteAll
+                await _backupManager.ExecuteAll();
+            }
+            catch (Exception ex)
+            {
+                // Handle or Log exceptions (e.g., showing a dialog to the user)
+                Debug.WriteLine($"Parallel Execution Error: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
-                _dispatcher.Invoke(LoadJobs);
+                // No need to Invoke if you're already on the UI thread (which async methods usually are)
+                LoadJobs();
             }
         }
 
         private async Task ExecuteCheckedJobsAsync()
         {
-            var checkedJobs = Jobs.Where(j => j.IsChecked).Select(j => j.Id).ToArray();
-            if (checkedJobs.Length == 0) return;
+            var checkedIds = Jobs.Where(j => j.IsChecked).Select(j => j.Id).ToList();
+            if (checkedIds.Count == 0) return;
 
             try
             {
                 IsBusy = true;
-                await Task.Run(() =>
-                {
-                    foreach (var id in checkedJobs)
-                    {
-                        _backupManager.ExecuteJob(id);
-                    }
-                });
+
+                // Create a list of tasks for all checked jobs
+                // This launches all of them simultaneously
+                var backupTasks = checkedIds.Select(id => _backupManager.ExecuteJob(id)).ToList();
+
+                // Wait for all selected jobs to complete in parallel
+                await Task.WhenAll(backupTasks);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Execution Error: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
-                _dispatcher.Invoke(LoadJobs);
+                LoadJobs();
             }
         }
 
