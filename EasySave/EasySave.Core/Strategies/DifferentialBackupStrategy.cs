@@ -45,9 +45,11 @@ namespace EasySave.Strategies
 
                 //  Temporary pause if business software is detected
                 // Instead of returning, we wait for the user to close the business app.
+                bool wasWaitingForBusinessSoftware = false;
                 while (jobContext.Settings != null &&
                        jobContext.BusinessService.IsBusinessSoftwareRunning(jobContext.Settings.BusinessSoftwareName))
                 {
+                    wasWaitingForBusinessSoftware = true;
                     jobContext.State = JobState.Paused;
                     jobContext.NotifyProgress();
                     EasyLogger.Instance.WriteLog(new LogEntry
@@ -61,6 +63,13 @@ namespace EasySave.Strategies
                         TransferTimeMs = -1
                     });
                     await Task.Delay(1000); // Polling every second
+                }
+
+                // CRITICAL FIX: Restore state to Active after business software is closed
+                if (wasWaitingForBusinessSoftware)
+                {
+                    jobContext.State = JobState.Active;
+                    jobContext.NotifyProgress();
                 }
 
                 // Check for manual Pause or Stop (Play/Pause/Stop functionality)

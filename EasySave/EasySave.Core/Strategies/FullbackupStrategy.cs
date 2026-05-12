@@ -48,8 +48,10 @@ namespace EasySave.Strategies
                 }
                 // Requirement: "Temporary pause if business software is detected"
                 // We use a loop to wait while the business software is open
+                bool wasWaitingForBusinessSoftware = false;
                 while (jobContext.Settings != null && jobContext.BusinessService.IsBusinessSoftwareRunning(jobContext.Settings.BusinessSoftwareName))
                 {
+                    wasWaitingForBusinessSoftware = true;
                     jobContext.State = JobState.Paused; // Visual feedback for user
                     jobContext.NotifyProgress();
                     EasyLogger.Instance.WriteLog(new LogEntry
@@ -63,6 +65,13 @@ namespace EasySave.Strategies
                         TransferTimeMs = -1
                     });
                     await Task.Delay(1000); // Poll every second
+                }
+
+                // CRITICAL FIX: Restore state to Active after business software is closed
+                if (wasWaitingForBusinessSoftware)
+                {
+                    jobContext.State = JobState.Active;
+                    jobContext.NotifyProgress();
                 }
 
                 jobContext.CheckPauseAndCancellation();
