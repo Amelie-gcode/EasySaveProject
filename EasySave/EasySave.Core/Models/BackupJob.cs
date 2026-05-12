@@ -1,11 +1,12 @@
 ﻿
 using EasyLog;
+using EasyLog;
 using EasySave.Core.Strategies;
 using EasySave.Strategies;
+using Microsoft.Win32;
 using System;
 using System.IO;
 using System.Threading;
-using EasyLog;
 
 namespace EasySave.Models
 {
@@ -45,7 +46,18 @@ namespace EasySave.Models
         public BusinessSoftwareService BusinessService { get; set; }
         public AppSettings Settings { get; set; }
 
+        private static int _globalPriorityFilesCount = 0;
+        // Track priority files for THIS specific job instance
+        public int LocalPriorityFilesCount { get; set; }
 
+        public static bool OthersHavePriority(int myCount)
+        {
+            // Only wait if the global total is higher than my own total
+            return Volatile.Read(ref _globalPriorityFilesCount) > myCount;
+        }
+
+        public static void IncrementGlobalPriority() => Interlocked.Increment(ref _globalPriorityFilesCount);
+        public static void DecrementGlobalPriority() => Interlocked.Decrement(ref _globalPriorityFilesCount);
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {
             Name = name;
@@ -113,12 +125,15 @@ namespace EasySave.Models
                 HandlePathError("Target path could not be accessed or created.");
                 return; // Safely abort the execution
             }
+            await Task.Run(() => CalculateInitialStats());
+            // Register this job's priority files globally
+            for (int i = 0; i < LocalPriorityFilesCount; i++)
+                IncrementGlobalPriority();
 
             // 3. EXECUTION: If both paths are valid, proceed with the Strategy
             try
             {
                 // Offload the heavy scanning to a background thread to keep UI responsive
-                await Task.Run(() => CalculateInitialStats());
                 // CRITICAL: The Strategy must now be Awaited
                 await _strategy.ExecuteBackupAsync(SourcePath, TargetPath, this);
 
@@ -138,15 +153,21 @@ namespace EasySave.Models
             }
             finally
             {
+                while (LocalPriorityFilesCount > 0)
+                {
+                    DecrementGlobalPriority();
+                    LocalPriorityFilesCount--;
+                }
                 NotifyProgress();
             }
         }
 
+
         public void RequestPause()
         {
             if (State != JobState.Active) return;
-            _pauseGate.Reset();
             State = JobState.Paused;
+            _pauseGate.Reset();
             NotifyProgress();
         }
 
@@ -161,7 +182,7 @@ namespace EasySave.Models
         public void RequestCancel()
         {
             Interlocked.Exchange(ref _cancelRequested, 1);
-            _pauseGate.Set(); // unblock if paused
+            _pauseGate.Set(); // unblock if paused, so CheckPauseAndCancellation can throw
             State = JobState.Cancelled;
             NotifyProgress();
         }
@@ -173,15 +194,21 @@ namespace EasySave.Models
 
             if (!_pauseGate.IsSet)
             {
-                State = JobState.Paused;
-                NotifyProgress();
-                _pauseGate.Wait();
+                // Wait with a timeout to prevent infinite blocking
+                // If timeout occurs, check cancellation again
+                if (!_pauseGate.Wait(1000))
+                {
+                    // Timeout occurred, check if cancel was requested
+                    if (Volatile.Read(ref _cancelRequested) == 1)
+                        throw new OperationCanceledException();
 
+                    // Still paused, continue waiting
+                    return;
+                }
+
+                // Gate was set (resumed), check one more time for cancellation
                 if (Volatile.Read(ref _cancelRequested) == 1)
                     throw new OperationCanceledException();
-
-                State = JobState.Active;
-                NotifyProgress();
             }
         }
 
@@ -217,6 +244,7 @@ namespace EasySave.Models
         /// </summary>
         private void CalculateInitialStats()
         {
+            
             var files = Directory.GetFiles(SourcePath, "*.*", SearchOption.AllDirectories);
             TotalFiles = files.Length;
             FilesRemaining = TotalFiles;
@@ -227,6 +255,9 @@ namespace EasySave.Models
                 TotalSize += new FileInfo(file).Length;
             }
             SizeRemaining = TotalSize;
+            // Calculate how many priority files this specific job has
+            int LocalPriorityFilesCount = files.Count(f => Settings.PriorityExtensions.Contains(Path.GetExtension(f)));
+
         }
 
         /// <summary>

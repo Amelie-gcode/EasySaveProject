@@ -19,6 +19,33 @@ namespace EasySave.Strategies
 
             foreach (string sourceFile in files)
             {
+                string extension = Path.GetExtension(sourceFile);
+                bool isPriority = jobContext.Settings.PriorityExtensions.Contains(extension);
+
+                // If this specific file is NOT a priority, check if others are waiting globally
+                if (!isPriority)
+                {
+                    // We wait while ANY job in the manager has priority files pending
+                    bool waited = false;
+                    // Check the GLOBAL status across all jobs
+                    while (BackupJob.OthersHavePriority(jobContext.LocalPriorityFilesCount))
+                    {
+                        waited = true;
+                        jobContext.State = JobState.Paused; // Visual feedback: "I'm waiting"
+                        jobContext.NotifyProgress();
+
+                        jobContext.CheckPauseAndCancellation();
+                        await Task.Delay(1000);
+                    }
+
+                    // CRITICAL FIX: If we were waiting, set state back to Active 
+                    // so the copy logic can proceed.
+                    if (waited)
+                    {
+                        jobContext.State = JobState.Active;
+                        jobContext.NotifyProgress();
+                    }
+                }
                 // Requirement: "Temporary pause if business software is detected"
                 // We use a loop to wait while the business software is open
                 while (jobContext.Settings != null && jobContext.BusinessService.IsBusinessSoftwareRunning(jobContext.Settings.BusinessSoftwareName))
@@ -97,9 +124,14 @@ namespace EasySave.Strategies
                         EncryptionTimeMs = encryptionTime
 
                     });
-
+                    
                     // Final notification for this file iteration
                     jobContext.NotifyProgress();
+                    if (isPriority)
+                    {
+                        BackupJob.DecrementGlobalPriority();
+                        jobContext.LocalPriorityFilesCount--; // Important to decrement both!
+                    }
                 }
             }
                 

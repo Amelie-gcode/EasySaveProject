@@ -23,5 +23,7 @@ namespace EasySave.Models
 
         // The name of the business software that blocks backups for Version 2.0
         public List<string> BusinessSoftwareName { get; set; } = new List<string> { "CalculatorApp.exe" };
+
+        public List<string> PriorityExtensions { get; set; } = new List<string> { ".jpg" };
     }
 }
