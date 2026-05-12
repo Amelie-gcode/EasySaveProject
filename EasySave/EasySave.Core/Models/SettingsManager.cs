@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 
@@ -33,7 +34,9 @@ namespace EasySave.Models
             if (!File.Exists(_settingsFilePath))
             {
                 // Return default settings if no file is found
-                return new AppSettings();
+                var defaultSettings = new AppSettings();
+                defaultSettings.CryptoSoftPath = ResolveCryptoSoftPath(defaultSettings.CryptoSoftPath);
+                return defaultSettings;
             }
 
             try
@@ -43,15 +46,18 @@ namespace EasySave.Models
 
                 if (loadedSettings != null)
                 {
-                    // On déchiffre la clé pour qu'elle soit utilisable par le programme
-                    loadedSettings.EncryptionKey = SecurityHelper.Unprotect(loadedSettings.EncryptionKey);
+                    // Ensure key is fully decrypted even if it was accidentally protected multiple times.
+                    loadedSettings.EncryptionKey = NormalizeEncryptionKey(loadedSettings.EncryptionKey);
+                    loadedSettings.CryptoSoftPath = ResolveCryptoSoftPath(loadedSettings.CryptoSoftPath);
                 }
 
-                return loadedSettings;
+                return loadedSettings ?? new AppSettings { CryptoSoftPath = ResolveCryptoSoftPath(null) };
             }
             catch
             {
-                return new AppSettings();
+                var fallbackSettings = new AppSettings();
+                fallbackSettings.CryptoSoftPath = ResolveCryptoSoftPath(fallbackSettings.CryptoSoftPath);
+                return fallbackSettings;
             }
         }
 
@@ -60,8 +66,24 @@ namespace EasySave.Models
             try
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                settings.EncryptionKey = SecurityHelper.Protect(settings.EncryptionKey);
-                string jsonContent = JsonSerializer.Serialize(settings, options);
+
+
+                // Do not mutate the in-memory object, otherwise the key can be re-protected repeatedly.
+                var normalizedKey = NormalizeEncryptionKey(settings.EncryptionKey);
+                var settingsToSave = new AppSettings
+                {
+                    Language = settings.Language,
+                    LogFormat = settings.LogFormat,
+                    ThemeMode = settings.ThemeMode,
+                    EncryptedExtensions = settings.EncryptedExtensions ?? new List<string>(),
+                    CryptoSoftPath = settings.CryptoSoftPath,
+                    EncryptionKey = SecurityHelper.Protect(string.IsNullOrWhiteSpace(normalizedKey) ? "default" : normalizedKey),
+                    BusinessSoftwareName = settings.BusinessSoftwareName ?? new List<string>(),
+                    PriorityExtensions = settings.PriorityExtensions ?? new List<string>()
+                };
+
+                string jsonContent = JsonSerializer.Serialize(settingsToSave, options);
+
                 File.WriteAllText(_settingsFilePath, jsonContent);
             }
             catch (Exception ex)
@@ -69,6 +91,77 @@ namespace EasySave.Models
                 // In a production environment, you would log this to a debug file
                 Console.WriteLine($"Warning: Could not save settings. {ex.Message}");
             }
+        }
+
+        private static string ResolveCryptoSoftPath(string? configuredPath)
+        {
+            if (!string.IsNullOrWhiteSpace(configuredPath) && File.Exists(configuredPath))
+            {
+                return configuredPath;
+            }
+
+            var detectedPath = FindCryptoSoftInProjectHierarchy();
+            if (!string.IsNullOrWhiteSpace(detectedPath))
+            {
+                return detectedPath;
+            }
+
+            return string.IsNullOrWhiteSpace(configuredPath)
+                ? Path.Combine(AppContext.BaseDirectory, "CryptoSoft.exe")
+                : configuredPath;
+        }
+
+        private static string? FindCryptoSoftInProjectHierarchy()
+        {
+            var current = new DirectoryInfo(AppContext.BaseDirectory);
+            while (current != null)
+            {
+                var directPath = Path.Combine(current.FullName, "CryptoSoft.exe");
+                if (File.Exists(directPath))
+                {
+                    return directPath;
+                }
+
+                var subFolderPath = Path.Combine(current.FullName, "CryptoSoft", "CryptoSoft.exe");
+                if (File.Exists(subFolderPath))
+                {
+                    return subFolderPath;
+                }
+
+                current = current.Parent;
+            }
+
+            return null;
+        }
+
+        private static string NormalizeEncryptionKey(string? rawKey)
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+            {
+                return "default";
+            }
+
+            string current = rawKey;
+
+            // Handles accidental multiple DPAPI protections by unwrapping layers.
+            for (int i = 0; i < 8; i++)
+            {
+                try
+                {
+                    string next = SecurityHelper.Unprotect(current);
+                    if (string.Equals(next, current, StringComparison.Ordinal))
+                    {
+                        break;
+                    }
+                    current = next;
+                }
+                catch
+                {
+                    break;
+                }
+            }
+
+            return string.IsNullOrWhiteSpace(current) ? "default" : current;
         }
     }
 }

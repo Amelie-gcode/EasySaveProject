@@ -100,6 +100,9 @@ namespace EasySave.Strategies
                     Stopwatch stopwatch = new Stopwatch();
                     long encryptionTime = 0;
 
+                    bool requiresEncryption = jobContext.Encryption.ShouldEncrypt(sourceFile);
+
+
                     try
                     {
                         if (isLargeFile)
@@ -115,11 +118,25 @@ namespace EasySave.Strategies
 
                         stopwatch.Start();
 
-                        if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+
+                        if (requiresEncryption)
+
                         {
                             await CopyFileAsync(sourceFile, targetFile, jobContext);
                             // CryptoSoft is an external single-instance process, offload to task
                             encryptionTime = await Task.Run(() => jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey));
+
+                            if (encryptionTime < 0)
+                            {
+                                if (File.Exists(targetFile))
+                                {
+                                    File.Delete(targetFile);
+                                }
+                                string details = string.IsNullOrWhiteSpace(jobContext.Encryption.LastError)
+                                    ? "Unknown CryptoSoft startup error."
+                                    : jobContext.Encryption.LastError;
+                                throw new InvalidOperationException($"Encryption failed for target file. {details}");
+                            }
                         }
                         else
                         {
