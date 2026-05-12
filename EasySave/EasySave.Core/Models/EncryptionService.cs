@@ -3,22 +3,17 @@
 public class EncryptionService
 {
     private readonly string _cryptoSoftPath;
-    private readonly HashSet<string> _targetExtensions;
-    public string LastError { get; private set; } = string.Empty;
+    private readonly string[] _targetExtensions;
 
     public EncryptionService(string exePath, string[] extensions)
     {
         _cryptoSoftPath = exePath;
-        _targetExtensions = new HashSet<string>(
-            (extensions ?? Array.Empty<string>())
-                .Where(ext => !string.IsNullOrWhiteSpace(ext))
-                .Select(ext => ext.StartsWith(".") ? ext.ToLowerInvariant() : "." + ext.ToLowerInvariant()),
-            StringComparer.OrdinalIgnoreCase);
+        _targetExtensions = extensions;
     }
 
     public bool ShouldEncrypt(string filePath)
     {
-        string extension = Path.GetExtension(filePath).ToLowerInvariant();
+        string extension = Path.GetExtension(filePath).ToLower();
         return _targetExtensions.Contains(extension);
     }
 
@@ -68,44 +63,7 @@ public class EncryptionService
             long secondAttempt = RunProcess(shellStartInfo);
             if (secondAttempt >= 0) return secondAttempt;
 
-            // Attempt 3: cmd fallback
-            var cmdStartInfo = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c \"\"{_cryptoSoftPath}\" {args}\"",
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WorkingDirectory = workingDirectory
-            };
-            long thirdAttempt = RunProcess(cmdStartInfo);
-            if (thirdAttempt >= 0) return thirdAttempt;
-
-            if (string.IsNullOrWhiteSpace(LastError))
-                LastError = "CryptoSoft failed to start.";
-            return -1;
-        }
-        catch (Exception ex)
-        {
-            LastError = ex.Message;
-            return -1;
-        }
-    }
-
-    private long RunProcess(ProcessStartInfo startInfo)
-    {
-        try
-        {
-            using Process? p = Process.Start(startInfo);
-            if (p == null)
-            {
-                LastError = "Process.Start returned null.";
-                return -1;
-            }
-
-            p.WaitForExit();
-            return p.ExitCode;
-        }
-        catch (Exception ex)
+        ProcessStartInfo startInfo = new ProcessStartInfo
         {
             LastError = ex.Message;
             return -1;
