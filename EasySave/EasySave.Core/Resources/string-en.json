@@ -65,8 +65,6 @@
   "GuiSettingsLogFormat": "Logs format",
   "GuiSettingsExtensions": "Extensions to encrypt (ex: .txt, .pdf)",
   "GuiSettingsBlockingApps": "Blocking software (ex: notepad.exe, game.exe)",
-  "GuiSettingsCryptoSoftPath": "CryptoSoft executable path",
-  "GuiCryptoSoftNotFound": "CryptoSoft.exe not found in the expected location. Please browse and select it.",
   "GuiSettingsEncryptionKey": "Encryption key",
   "StateInactive": "Inactive",
   "StateActive": "Active",
