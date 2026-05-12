@@ -66,7 +66,7 @@ namespace EasySave.Models
             try
             {
                 var options = new JsonSerializerOptions { WriteIndented = true };
-<<<<<<< feature/CryptoSoft
+
 
                 // Do not mutate the in-memory object, otherwise the key can be re-protected repeatedly.
                 var normalizedKey = NormalizeEncryptionKey(settings.EncryptionKey);
@@ -83,10 +83,7 @@ namespace EasySave.Models
                 };
 
                 string jsonContent = JsonSerializer.Serialize(settingsToSave, options);
-=======
-                settings.EncryptionKey = SecurityHelper.Protect(settings.EncryptionKey);
-                string jsonContent = JsonSerializer.Serialize(settings, options);
->>>>>>> develop
+
                 File.WriteAllText(_settingsFilePath, jsonContent);
             }
             catch (Exception ex)

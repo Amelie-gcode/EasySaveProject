@@ -13,9 +13,6 @@
                 <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Margin="8" Background="#FFFFFF">
                     <StackPanel>
                         <TextBlock Text="{Binding CreateText}" FontSize="18" FontWeight="SemiBold" Foreground="#2D6CDF" Margin="0,0,0,12" />
-
-<<<<<<< feature/CryptoSoft
-=======
                         <TextBlock Text="{Binding JobNameHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
                         <TextBox Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
 
@@ -77,7 +74,6 @@
                                                       IsChecked="{Binding IsChecked, Mode=TwoWay}"
                                                       Margin="0,2,0,0"/>
 
->>>>>>> develop
                                             <Grid Grid.Column="2">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
@@ -264,7 +260,6 @@
                         </StackPanel>
 
                         <StackPanel Grid.Row="5" Margin="0,0,0,12">
-<<<<<<< feature/CryptoSoft
                             <TextBlock Text="{Binding SettingsCryptoSoftPathText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
                             <DockPanel LastChildFill="True">
                                 <Button Content="{Binding BrowseText}"
@@ -301,10 +296,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-=======
-                            <TextBlock Text="{Binding SettingsEncryptionKeyText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding EncryptionKeyInput, UpdateSourceTrigger=PropertyChanged}" />
->>>>>>> develop
+
                         </StackPanel>
 
                         <Button Grid.Row="6"
