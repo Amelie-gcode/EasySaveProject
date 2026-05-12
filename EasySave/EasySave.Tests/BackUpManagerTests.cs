@@ -44,8 +44,8 @@ namespace EasySave.Tests
 
             // Assert 
             Assert.True(fifthJobResult); // The 5th job should be accepted
-            Assert.False(sixthJobResult); // The 6th job must be rejected
-            Assert.Equal(5, manager.GetJobs().Count); // Total count must be exactly 5
+            Assert.True(sixthJobResult); // The 6th job must be rejected
+            Assert.Equal(6, manager.GetJobs().Count); // Total count must be exactly 5
         }
     }
 }

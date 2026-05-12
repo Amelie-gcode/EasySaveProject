@@ -64,8 +64,11 @@
   "GuiSettingsLogFormat": "Formato de logs",
   "GuiSettingsExtensions": "Extensiones a cifrar (ej: .txt, .pdf)",
   "GuiSettingsBlockingApps": "Software bloqueante (ej: notepad.exe, game.exe)",
+<<<<<<< feature/CryptoSoft
   "GuiSettingsCryptoSoftPath": "Ruta del ejecutable CryptoSoft",
   "GuiCryptoSoftNotFound": "No se encontró CryptoSoft.exe en la ubicación esperada. Selecciónelo manualmente.",
+=======
+>>>>>>> develop
   "GuiSettingsEncryptionKey": "Clave de cifrado",
   "StateInactive": "Inactivo",
   "StateActive": "Activo",

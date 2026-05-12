@@ -31,12 +31,16 @@ namespace EasySave.Models
         private readonly string _stateFilePath;
         private readonly object _fileLock = new object();
 
-        // Dictionary to track the latest state of all jobs by their Name
-        private readonly Dictionary<string, JobStateData> _jobStates;
+        // We keep a historical sequence of state updates so the state.json
+        // file reflects the live progression of jobs (appended entries).
+        // This replaces the previous approach which only stored the latest
+        // snapshot per job and caused the file to appear as "only the last"
+        // state. Keeping a list makes it easy to show a live feed.
+        private readonly List<JobStateData> _history;
 
         public StateManager()
         {
-            _jobStates = new Dictionary<string, JobStateData>();
+            _history = new List<JobStateData>();
 
             // Professional path in AppData to avoid permission issues
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -55,29 +59,29 @@ namespace EasySave.Models
         /// </summary>
         private void LoadExistingStates()
         {
-            if (File.Exists(_stateFilePath))
-            {
-                try
-                {
-                    string jsonContent = File.ReadAllText(_stateFilePath);
-                    if (!string.IsNullOrWhiteSpace(jsonContent))
-                    {
-                        // Deserialize the JSON array into a list
-                        var existingStates = JsonSerializer.Deserialize<List<JobStateData>>(jsonContent);
+            if (!File.Exists(_stateFilePath)) return;
 
-                        if (existingStates != null)
-                        {
-                            foreach (var state in existingStates)
-                            {
-                                _jobStates[state.Name] = state;
-                            }
-                        }
-                    }
-                }
-                catch (Exception ex)
+            try
+            {
+                string jsonContent = File.ReadAllText(_stateFilePath);
+                if (string.IsNullOrWhiteSpace(jsonContent)) return;
+
+                // Try to deserialize as a list of JobStateData (historical format)
+                var existingList = JsonSerializer.Deserialize<List<JobStateData>>(jsonContent);
+                if (existingList != null && existingList.Count > 0)
                 {
-                    Console.WriteLine($"Warning: Could not load previous state file: {ex.Message}");
+                    // If the file contains multiple entries (history), reuse them
+                    _history.AddRange(existingList);
+                    return;
                 }
+
+                // Back-compat: if file was previously a dictionary-like array (one entry per job),
+                // we still load those entries into the history so the file continues to represent
+                // previous states.
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Could not load previous state file: {ex.Message}");
             }
         }
 
@@ -97,10 +101,10 @@ namespace EasySave.Models
         /// </summary>
         private void UpdateStateFile(BackupJob job)
         {
-            lock (_fileLock) // Protects both the Dictionary and the File I/O
+            lock (_fileLock) // Protects both the history list and the File I/O
             {
-                // 1. Update the in-memory state
-                _jobStates[job.Name] = new JobStateData
+                // 1. Create a new snapshot entry and append it to the history
+                var entry = new JobStateData
                 {
                     Name = job.Name,
                     LastUpdate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -115,11 +119,13 @@ namespace EasySave.Models
                     CurrentDestination = job.CurrentTargetFile ?? string.Empty
                 };
 
-                // 2. Write the entire collection to disk
+                _history.Add(entry);
+
+                // 2. Write the entire history to disk (so external viewers can follow a live feed)
                 try
                 {
                     var options = new JsonSerializerOptions { WriteIndented = true };
-                    string jsonString = JsonSerializer.Serialize(_jobStates.Values, options);
+                    string jsonString = JsonSerializer.Serialize(_history, options);
                     File.WriteAllText(_stateFilePath, jsonString);
                 }
                 catch (IOException)

@@ -16,9 +16,17 @@ namespace EasySave.WPF
     /// </summary>
     public partial class MainWindow : Window
     {
+        // Parameterless ctor kept for designer/tools.
         public MainWindow()
         {
             InitializeComponent();
+            DataContext = new MainViewModel();
+        }
+
+        public MainWindow(MainViewModel viewModel)
+        {
+            InitializeComponent();
+            DataContext = viewModel;
         }
     }
 }

@@ -1,8 +1,12 @@
 ﻿
+using EasyLog;
+using EasyLog;
+using EasySave.Core.Strategies;
 using EasySave.Strategies;
+using Microsoft.Win32;
 using System;
 using System.IO;
-using EasyLog;
+using System.Threading;
 
 namespace EasySave.Models
 {
@@ -31,9 +35,32 @@ namespace EasySave.Models
         // Event used for the Observer pattern
         public event EventHandler ProgressUpdated;
 
+        private readonly ManualResetEventSlim _pauseGate = new ManualResetEventSlim(true);
+        private int _cancelRequested;
         // Encryption Service 
         public EncryptionService Encryption { get; set; }
         public string EncryptionKey { get; set; }
+
+
+        //needed to check business software during execution
+        public BusinessSoftwareService BusinessService { get; set; }
+        public AppSettings Settings { get; set; }
+
+        private static int _globalPriorityFilesCount = 0;
+        // Track priority files for THIS specific job instance
+        public int LocalPriorityFilesCount { get; set; }
+
+        public static bool OthersHavePriority(int myCount)
+        {
+            // Only wait if the global total is higher than my own total
+            return Volatile.Read(ref _globalPriorityFilesCount) > myCount;
+        }
+
+        public static void IncrementGlobalPriority() => Interlocked.Increment(ref _globalPriorityFilesCount);
+        public static void DecrementGlobalPriority() => Interlocked.Decrement(ref _globalPriorityFilesCount);
+
+        // Allows exactly ONE thread at a time
+        public static readonly SemaphoreSlim LargeFileSemaphore = new SemaphoreSlim(1, 1);
 
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {
@@ -42,6 +69,8 @@ namespace EasySave.Models
             TargetPath = target;
             _strategy = strategy;
             State = JobState.Inactive;
+            BusinessService = new BusinessSoftwareService();
+
         }
 
         public IBackupStrategy GetStrategy()
@@ -54,8 +83,29 @@ namespace EasySave.Models
         /// <summary>
         /// Executes the backup job with pre-flight path validation.
         /// </summary>
-        public void Execute()
+        public async Task Execute()
         {
+            // CHECK #1 — before the backup starts
+            if (Settings != null && BusinessService != null && BusinessService.IsBusinessSoftwareRunning(Settings.BusinessSoftwareName))
+            {
+                string detected = BusinessService.GetDetectedSoftwareName(Settings.BusinessSoftwareName);
+                State = JobState.Cancelled;
+                FilesRemaining = 0;
+                SizeRemaining = 0;
+
+                EasyLogger.Instance.WriteLog(new LogEntry
+                {
+                    Timestamp = DateTime.Now,
+                    BackupName = Name,
+                    SourceFilePath = $"BLOCKED by: {detected}",
+                    TargetFilePath = string.Empty,
+                    FileSize = 0,
+                    TransferTimeMs = -1
+                });
+
+                NotifyProgress();
+                return;
+            }
             this.State = JobState.Active;
             NotifyProgress();
 
@@ -80,18 +130,27 @@ namespace EasySave.Models
                 HandlePathError("Target path could not be accessed or created.");
                 return; // Safely abort the execution
             }
+            await Task.Run(() => CalculateInitialStats());
+            // Register this job's priority files globally
+            for (int i = 0; i < LocalPriorityFilesCount; i++)
+                IncrementGlobalPriority();
 
             // 3. EXECUTION: If both paths are valid, proceed with the Strategy
             try
             {
-                CalculateInitialStats(); // Gather totals for progress tracking
-                _strategy.ExecuteBackup(SourcePath, TargetPath, this);
+                // Offload the heavy scanning to a background thread to keep UI responsive
+                // CRITICAL: The Strategy must now be Awaited
+                await _strategy.ExecuteBackupAsync(SourcePath, TargetPath, this);
 
                 // Only mark as completed if the strategy didn't encounter internal fatal errors
-                if (this.State != JobState.Error)
+                if (this.State != JobState.Error && this.State != JobState.Cancelled)
                 {
                     this.State = JobState.Completed;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                this.State = JobState.Cancelled;
             }
             catch (Exception)
             {
@@ -99,7 +158,62 @@ namespace EasySave.Models
             }
             finally
             {
+                while (LocalPriorityFilesCount > 0)
+                {
+                    DecrementGlobalPriority();
+                    LocalPriorityFilesCount--;
+                }
                 NotifyProgress();
+            }
+        }
+
+
+        public void RequestPause()
+        {
+            if (State != JobState.Active) return;
+            State = JobState.Paused;
+            _pauseGate.Reset();
+            NotifyProgress();
+        }
+
+        public void RequestResume()
+        {
+            if (State != JobState.Paused) return;
+            State = JobState.Active;
+            _pauseGate.Set();
+            NotifyProgress();
+        }
+
+        public void RequestCancel()
+        {
+            Interlocked.Exchange(ref _cancelRequested, 1);
+            _pauseGate.Set(); // unblock if paused, so CheckPauseAndCancellation can throw
+            State = JobState.Cancelled;
+            NotifyProgress();
+        }
+
+        internal void CheckPauseAndCancellation()
+        {
+            if (Volatile.Read(ref _cancelRequested) == 1)
+                throw new OperationCanceledException();
+
+            if (!_pauseGate.IsSet)
+            {
+                // Wait with a timeout to prevent infinite blocking
+                // If timeout occurs, check cancellation again
+                if (!_pauseGate.Wait(1000))
+                {
+                    // Timeout occurred, check if cancel was requested
+                    if (Volatile.Read(ref _cancelRequested) == 1)
+                        throw new OperationCanceledException();
+
+                    // Still paused, continue waiting
+                    return;
+                }
+
+                // Gate was set (resumed), check one more time for cancellation
+                if (Volatile.Read(ref _cancelRequested) == 1)
+                    throw new OperationCanceledException();
             }
         }
 
@@ -135,6 +249,7 @@ namespace EasySave.Models
         /// </summary>
         private void CalculateInitialStats()
         {
+            
             var files = Directory.GetFiles(SourcePath, "*.*", SearchOption.AllDirectories);
             TotalFiles = files.Length;
             FilesRemaining = TotalFiles;
@@ -145,6 +260,9 @@ namespace EasySave.Models
                 TotalSize += new FileInfo(file).Length;
             }
             SizeRemaining = TotalSize;
+            // Calculate how many priority files this specific job has
+            int LocalPriorityFilesCount = files.Count(f => Settings.PriorityExtensions.Contains(Path.GetExtension(f)));
+
         }
 
         /// <summary>

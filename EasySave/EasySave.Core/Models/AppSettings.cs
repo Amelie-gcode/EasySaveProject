@@ -11,14 +11,21 @@ namespace EasySave.Models
         // The preferred log format for Version 1.1 (e.g., "JSON" or "XML")
         public string LogFormat { get; set; } = "JSON";
 
+        // Preferred visual mode for the UI ("Claire" or "Sombre").
+        public string ThemeMode { get; set; } = "Claire";
+
         // List of file extensions that should be encrypted by CryptoSoft for Version 2.0
         public List<string> EncryptedExtensions { get; set; } = new List<string> { ".txt", ".docx", ".pdf" };
 
-        public string CryptoSoftPath { get; set; } = @"C:\Users\ameli\Documents\A3\Software\project\EasySave\External\CryptoSoft\CryptoSoft.exe";
+        public string CryptoSoftPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EasySave\\CryptoSoft\\CryptoSoft.exe");
 
         public string EncryptionKey { get; set; } = "default";
 
         // The name of the business software that blocks backups for Version 2.0
-        public string BusinessSoftwareName { get; set; } = "calculator";
+        public List<string> BusinessSoftwareName { get; set; } = new List<string> { "CalculatorApp.exe" };
+
+        public List<string> PriorityExtensions { get; set; } = new List<string> { ".jpg" };
+
+        public long MaxParallelSize { get; set; } = 100; // n KB threshold
     }
 }

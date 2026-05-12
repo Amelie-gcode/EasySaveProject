@@ -35,7 +35,8 @@ namespace EasyLog
     ""sourceFilePath"": ""{EscapeJson(entry.SourceFilePath)}"",
     ""targetFilePath"": ""{EscapeJson(entry.TargetFilePath)}"",
     ""fileSize"": {entry.FileSize},
-    ""transferTimeMs"": {entry.TransferTimeMs}
+    ""transferTimeMs"": {entry.TransferTimeMs},
+    ""encryptionTimeMs"": {entry.EncryptionTimeMs}
   }}";
         }
 

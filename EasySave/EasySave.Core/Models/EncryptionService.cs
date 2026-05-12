@@ -22,12 +22,19 @@ public class EncryptionService
         return _targetExtensions.Contains(extension);
     }
 
+<<<<<<< feature/CryptoSoft
     public long Encrypt(string target, string key)
     {
         LastError = string.Empty;
+=======
+    public long Encrypt( string target, string key)
+    {
+        if (string.IsNullOrEmpty(key)) return 0;
+>>>>>>> develop
 
         if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(target) || !File.Exists(target))
         {
+<<<<<<< feature/CryptoSoft
             LastError = "Invalid encryption input (key/target).";
             return -1;
         }
@@ -107,6 +114,23 @@ public class EncryptionService
         {
             LastError = ex.Message;
             return -1;
+=======
+            FileName = _cryptoSoftPath,
+            Arguments = $"\"{target}\" \"{key}\"",
+            CreateNoWindow = true,
+            UseShellExecute = false
+        };
+
+
+        using (Process p = Process.Start(startInfo))
+        {
+            if (p == null) return -1;
+
+            p.WaitForExit();
+
+            // Capture the ElapsedMilliseconds returned by CryptoSoft's Environment.Exit()
+            return (long)p.ExitCode;
+>>>>>>> develop
         }
     }
 }
