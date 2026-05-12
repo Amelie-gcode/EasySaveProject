@@ -31,7 +31,6 @@ namespace EasySave.Models
             // Load saved jobs on startup
             LoadFromConfig();
         }
-
         private void LoadFromConfig()
         {
             var savedJobs = _configManager.LoadJobs();
