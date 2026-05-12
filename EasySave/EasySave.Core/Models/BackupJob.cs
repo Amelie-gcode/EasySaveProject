@@ -58,6 +58,10 @@ namespace EasySave.Models
 
         public static void IncrementGlobalPriority() => Interlocked.Increment(ref _globalPriorityFilesCount);
         public static void DecrementGlobalPriority() => Interlocked.Decrement(ref _globalPriorityFilesCount);
+
+        // Allows exactly ONE thread at a time
+        public static readonly SemaphoreSlim LargeFileSemaphore = new SemaphoreSlim(1, 1);
+
         public BackupJob(string name, string source, string target, IBackupStrategy strategy)
         {
             Name = name;
@@ -66,6 +70,7 @@ namespace EasySave.Models
             _strategy = strategy;
             State = JobState.Inactive;
             BusinessService = new BusinessSoftwareService();
+
         }
 
         public IBackupStrategy GetStrategy()

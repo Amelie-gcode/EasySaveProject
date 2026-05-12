@@ -25,5 +25,7 @@ namespace EasySave.Models
         public List<string> BusinessSoftwareName { get; set; } = new List<string> { "CalculatorApp.exe" };
 
         public List<string> PriorityExtensions { get; set; } = new List<string> { ".jpg" };
+
+        public long MaxParallelSize { get; set; } = 100; // n KB threshold
     }
 }
