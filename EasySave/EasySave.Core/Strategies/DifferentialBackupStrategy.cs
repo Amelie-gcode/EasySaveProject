@@ -80,12 +80,26 @@ namespace EasySave.Strategies
 
                 if (shouldCopy)
                 {
+                    //check file size against threshold for parallelism
+                    long fileSizeInBytes = new FileInfo(sourceFile).Length;
+                    long thresholdInBytes = jobContext.Settings.MaxParallelSize * 1024;
+
+                    bool isLargeFile = fileSizeInBytes > thresholdInBytes;
+                    bool semaphoreAcquired = false;
+
                     long transferTimeMs = -1;
                     Stopwatch stopwatch = new Stopwatch();
                     long encryptionTime = 0;
 
                     try
                     {
+                        if (isLargeFile)
+                        {
+                            // If it's a large file, wait here until the semaphore is free.
+                            // Small files in other jobs will NOT be blocked by this.
+                            await BackupJob.LargeFileSemaphore.WaitAsync();
+                            semaphoreAcquired = true;
+                        }
                         jobContext.CurrentSourceFile = sourceFile;
                         jobContext.CurrentTargetFile = targetFile;
                         jobContext.NotifyProgress();
@@ -133,6 +147,11 @@ namespace EasySave.Strategies
                         {
                             BackupJob.DecrementGlobalPriority();
                             jobContext.LocalPriorityFilesCount--; // Important to decrement both!
+                        }
+                        if (semaphoreAcquired)
+                        {
+                            // CRITICAL: Release the lock so the next large file can start
+                            BackupJob.LargeFileSemaphore.Release();
                         }
                     }
                 }
