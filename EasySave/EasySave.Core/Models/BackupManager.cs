@@ -12,7 +12,7 @@ namespace EasySave.Models
         private readonly StateManager _stateManager;
         private readonly IConfigManager _configManager;
         private readonly SettingsManager _settingsManager;
-        private readonly EncryptionService _encryptionService;
+        private EncryptionService _encryptionService;
 
         public BackupManager(IConfigManager configManager = null)
         {
@@ -25,9 +25,10 @@ namespace EasySave.Models
 
             _settingsManager = new SettingsManager();
 
+            var initialSettings = _settingsManager.LoadSettings();
             _encryptionService = new EncryptionService(
-                _settingsManager.LoadSettings().CryptoSoftPath,
-                _settingsManager.LoadSettings().EncryptedExtensions.ToArray());
+                initialSettings.CryptoSoftPath,
+                initialSettings.EncryptedExtensions.ToArray());
             // Load saved jobs on startup
             LoadFromConfig();
         }
@@ -64,6 +65,9 @@ namespace EasySave.Models
 
             // 1. Refresh settings (in case the user changed the key or extensions recently)
             var settings = _settingsManager.LoadSettings();
+            _encryptionService = new EncryptionService(
+                settings.CryptoSoftPath,
+                settings.EncryptedExtensions.ToArray());
 
             // 2. "Inject" the dependencies into the Job
             // We pass the ALREADY DECRYPTED key (handled by LoadSettings)
