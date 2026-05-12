@@ -99,6 +99,10 @@ namespace EasySave.Strategies
                     long transferTimeMs = -1;
                     Stopwatch stopwatch = new Stopwatch();
                     long encryptionTime = 0;
+<<<<<<< feature/CryptoSoft
+                    bool requiresEncryption = jobContext.Encryption.ShouldEncrypt(sourceFile);
+=======
+>>>>>>> develop
 
                     try
                     {
@@ -115,11 +119,29 @@ namespace EasySave.Strategies
 
                         stopwatch.Start();
 
+<<<<<<< feature/CryptoSoft
+                        if (requiresEncryption)
+=======
                         if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+>>>>>>> develop
                         {
                             await CopyFileAsync(sourceFile, targetFile, jobContext);
                             // CryptoSoft is an external single-instance process, offload to task
                             encryptionTime = await Task.Run(() => jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey));
+<<<<<<< feature/CryptoSoft
+                            if (encryptionTime < 0)
+                            {
+                                if (File.Exists(targetFile))
+                                {
+                                    File.Delete(targetFile);
+                                }
+                                string details = string.IsNullOrWhiteSpace(jobContext.Encryption.LastError)
+                                    ? "Unknown CryptoSoft startup error."
+                                    : jobContext.Encryption.LastError;
+                                throw new InvalidOperationException($"Encryption failed for target file. {details}");
+                            }
+=======
+>>>>>>> develop
                         }
                         else
                         {

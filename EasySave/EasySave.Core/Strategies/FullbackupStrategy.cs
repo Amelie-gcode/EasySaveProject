@@ -84,6 +84,9 @@ namespace EasySave.Strategies
                 long fileSize = new FileInfo(sourceFile).Length;
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 long encryptionTime = 0;
+<<<<<<< feature/CryptoSoft
+                bool requiresEncryption = jobContext.Encryption.ShouldEncrypt(sourceFile);
+=======
 
                 //check file size against threshold for parallelism
                 long fileSizeInBytes = new FileInfo(sourceFile).Length;
@@ -91,6 +94,7 @@ namespace EasySave.Strategies
 
                 bool isLargeFile = fileSizeInBytes > thresholdInBytes;
                 bool semaphoreAcquired = false;
+>>>>>>> develop
 
                 try
                 {
@@ -108,11 +112,29 @@ namespace EasySave.Strategies
                     // Notify state that we are starting this specific file
                     jobContext.NotifyProgress();
 
+<<<<<<< feature/CryptoSoft
+                    if (requiresEncryption)
+=======
                     if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+>>>>>>> develop
                     {
                         await CopyFileAsync(sourceFile, targetFile, jobContext);
                         // Encryption is usually an external process call (CryptoSoft)
                         encryptionTime = await Task.Run(() => jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey));
+<<<<<<< feature/CryptoSoft
+                        if (encryptionTime < 0)
+                        {
+                            if (File.Exists(targetFile))
+                            {
+                                File.Delete(targetFile);
+                            }
+                            string details = string.IsNullOrWhiteSpace(jobContext.Encryption.LastError)
+                                ? "Unknown CryptoSoft startup error."
+                                : jobContext.Encryption.LastError;
+                            throw new InvalidOperationException($"Encryption failed for target file. {details}");
+                        }
+=======
+>>>>>>> develop
                     }
                     else
                     {
