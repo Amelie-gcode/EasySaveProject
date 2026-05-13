@@ -73,6 +73,8 @@
   "StatePaused": "Paused",
   "StateCompleted": "Completed",
   "StateCancelled": "Cancelled",
-  "StateError": "Error"
+  "StateError": "Error",
+  "GuiSettingsPriority": "Backup job priority",
+  "GuiSettingsMaxSize": "Maximum backup size (GB)"
 
 }

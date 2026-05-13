@@ -30,6 +30,8 @@ namespace EasySave.WPF
         private string _selectedLogFormat = "JSON";
         private string _encryptedExtensionsInput = string.Empty;
         private string _businessSoftwareInput = string.Empty;
+        private string _priorityExtensionsInput = string.Empty;
+        private string _maxFileSizeInput = "0"; // Stocké en string pour le TextBox
         private bool _isModifyPanelOpen;
 
         public ObservableCollection<JobViewModel> Jobs { get; } = new ObservableCollection<JobViewModel>();
@@ -106,6 +108,27 @@ namespace EasySave.WPF
                 OnPropertyChanged();
             }
         }
+        public string PriorityExtensionsInput
+        {
+            get => _priorityExtensionsInput;
+            set
+            {
+                if (_priorityExtensionsInput == value) return;
+                _priorityExtensionsInput = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string MaxFileSizeInput
+        {
+            get => _maxFileSizeInput;
+            set
+            {
+                if (_maxFileSizeInput == value) return;
+                _maxFileSizeInput = value;
+                OnPropertyChanged();
+            }
+        }
 
         public bool IsModifyPanelOpen
         {
@@ -138,6 +161,10 @@ namespace EasySave.WPF
         public string SettingsLogFormatText => LocalizationManager.Instance.GetString("GuiSettingsLogFormat");
         public string SettingsExtensionsText => LocalizationManager.Instance.GetString("GuiSettingsExtensions");
         public string SettingsBlockingAppsText => LocalizationManager.Instance.GetString("GuiSettingsBlockingApps");
+        public string SettingsPriorityText => LocalizationManager.Instance.GetString("GuiSettingsPriority");
+        public string SettingsMaxFileSizeText => LocalizationManager.Instance.GetString("GuiSettingsMaxSize");
+
+        // N'oublie pas d'ajouter les OnPropertyChanged correspondants dans ApplyLanguage()
 
         public string LabelNameText => LocalizationManager.Instance.GetString("LabelName");
         public string LabelSourceText => LocalizationManager.Instance.GetString("LabelSource");
@@ -238,7 +265,8 @@ namespace EasySave.WPF
             _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
             _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
             _businessSoftwareInput = string.Join(", ", _currentSettings.BusinessSoftwareName ?? new System.Collections.Generic.List<string>());
-
+            _priorityExtensionsInput = string.Join(", ", _currentSettings.PriorityExtensions ?? new List<string>());
+            _maxFileSizeInput = _currentSettings.MaxParallelSize.ToString();
             _backupManager = new BackupManager();
 
             LoadJobs();
@@ -381,6 +409,8 @@ namespace EasySave.WPF
             OnPropertyChanged(nameof(LabelSourceText));
             OnPropertyChanged(nameof(LabelTargetText));
             OnPropertyChanged(nameof(LabelStateText));
+            OnPropertyChanged(nameof(SettingsPriorityText));    // for label "Extensions Prioritaires"
+            OnPropertyChanged(nameof(SettingsMaxFileSizeText)); // for label "Taille Max Fichier"
 
             foreach (var job in Jobs)
             {
@@ -501,6 +531,14 @@ namespace EasySave.WPF
             _currentSettings.LogFormat = SelectedLogFormat;
             _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
             _currentSettings.BusinessSoftwareName = ParseCsvList(BusinessSoftwareInput, ensureDotPrefix: false);
+            
+            _currentSettings.PriorityExtensions = ParseCsvList(PriorityExtensionsInput, ensureDotPrefix: true);
+
+            if (long.TryParse(MaxFileSizeInput, out long maxSize))
+            {
+                _currentSettings.MaxParallelSize = maxSize;
+            }
+           
             _settingsManager.SaveSettings(_currentSettings);
             ApplyLanguage(SelectedLanguage);
         }

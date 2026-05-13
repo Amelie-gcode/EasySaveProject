@@ -64,17 +64,18 @@
   "GuiSettingsLogFormat": "تنسيق السجلات",
   "GuiSettingsExtensions": "الامتدادات المطلوب تشفيرها (مثال: .txt, .pdf)",
   "GuiSettingsBlockingApps": "برامج الإيقاف (مثال: notepad.exe, game.exe)",
-<<<<<<< feature/CryptoSoft
   "GuiSettingsCryptoSoftPath": "مسار ملف CryptoSoft التنفيذي",
   "GuiCryptoSoftNotFound": "لم يتم العثور على CryptoSoft.exe في المسار المتوقع. يرجى تحديده يدوياً.",
-=======
->>>>>>> develop
+
   "GuiSettingsEncryptionKey": "مفتاح التشفير",
   "StateInactive": "غير نشط",
   "StateActive": "نشط",
   "StatePaused": "متوقف مؤقتاً",
   "StateCompleted": "مكتمل",
   "StateCancelled": "ملغي",
-  "StateError": "خطأ"
+  "StateError": "خطأ",
+  "GuiSettingsPriority": "أولوية مهمة النسخ",
+  "GuiSettingsMaxSize": "الحد الأقصى لحجم النسخة (GB)"
+
 }
 
