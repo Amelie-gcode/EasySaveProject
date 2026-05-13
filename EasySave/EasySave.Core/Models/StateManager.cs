@@ -6,9 +6,6 @@ using System.Linq;
 
 namespace EasySave.Models
 {
-    /// <summary>
-    /// A structured model specifically for the JSON serialization of the state file.
-    /// </summary>
     public class JobStateData
     {
         public string Name { get; set; }
@@ -19,120 +16,134 @@ namespace EasySave.Models
         public int Progress { get; set; }
         public int FilesRemaining { get; set; }
         public long SizeRemaining { get; set; }
+        /// <summary>Job root folder (always set).</summary>
+        public string SourceDirectory { get; set; }
+        /// <summary>Job root folder (always set).</summary>
+        public string TargetDirectory { get; set; }
+        /// <summary>File currently being copied (empty when idle / between files).</summary>
         public string CurrentSource { get; set; }
         public string CurrentDestination { get; set; }
+        /// <summary>Set when Status is Completed (last file copied).</summary>
+        public string CompletedAt { get; set; }
     }
 
-    /// <summary>
-    /// Handles the real-time status file (state.json) by observing BackupJob events.
-    /// </summary>
     public class StateManager
     {
         private readonly string _stateFilePath;
         private readonly object _fileLock = new object();
 
-        // We keep a historical sequence of state updates so the state.json
-        // file reflects the live progression of jobs (appended entries).
-        // This replaces the previous approach which only stored the latest
-        // snapshot per job and caused the file to appear as "only the last"
-        // state. Keeping a list makes it easy to show a live feed.
-        private readonly List<JobStateData> _history;
+        // ONE entry per job — replaced on every update, never accumulated
+        private readonly Dictionary<string, JobStateData> _states
+            = new Dictionary<string, JobStateData>();
 
         public StateManager()
         {
-            _history = new List<JobStateData>();
-
-            // Professional path in AppData to avoid permission issues
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appData = Environment.GetFolderPath(
+                Environment.SpecialFolder.ApplicationData);
             string directory = Path.Combine(appData, "EasySave");
 
-            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
 
             _stateFilePath = Path.Combine(directory, "state.json");
-
-            // Load existing states from the file so we don't overwrite history on restart
-            LoadExistingStates();
         }
 
-        /// <summary>
-        /// Reads the state.json file on startup to populate the dictionary.
-        /// </summary>
-        private void LoadExistingStates()
-        {
-            if (!File.Exists(_stateFilePath)) return;
-
-            try
-            {
-                string jsonContent = File.ReadAllText(_stateFilePath);
-                if (string.IsNullOrWhiteSpace(jsonContent)) return;
-
-                // Try to deserialize as a list of JobStateData (historical format)
-                var existingList = JsonSerializer.Deserialize<List<JobStateData>>(jsonContent);
-                if (existingList != null && existingList.Count > 0)
-                {
-                    // If the file contains multiple entries (history), reuse them
-                    _history.AddRange(existingList);
-                    return;
-                }
-
-                // Back-compat: if file was previously a dictionary-like array (one entry per job),
-                // we still load those entries into the history so the file continues to represent
-                // previous states.
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Could not load previous state file: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Triggered by a BackupJob via the Observer pattern.
-        /// </summary>
+        // Called by BackupJob every time progress changes
         public void OnJobProgressUpdated(object sender, EventArgs e)
         {
             if (sender is BackupJob job)
-            {
                 UpdateStateFile(job);
-            }
         }
 
         /// <summary>
-        /// Serializes the array of all job states to the JSON file.
+        /// Persists current job fields to state.json (used after the ProgressUpdated
+        /// handler is unsubscribed, e.g. delayed completion cleanup).
         /// </summary>
+        public void PublishFromJob(BackupJob job)
+        {
+            if (job != null)
+                UpdateStateFile(job);
+        }
+
         private void UpdateStateFile(BackupJob job)
         {
-            lock (_fileLock) // Protects both the history list and the File I/O
+            lock (_fileLock)
             {
-                // 1. Create a new snapshot entry and append it to the history
-                var entry = new JobStateData
+                int progress = ComputeProgressPercent(job);
+
+                string completedAt = string.Empty;
+                if (job.State == JobState.Completed)
+                    completedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+                // Replace this job's entry — never add a new one
+                _states[job.Name] = new JobStateData
                 {
                     Name = job.Name,
-                    LastUpdate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    LastUpdate = DateTime.Now
+                                           .ToString("yyyy-MM-dd HH:mm:ss"),
                     Status = job.State.ToString(),
                     TotalFiles = job.TotalFiles,
                     TotalSize = job.TotalSize,
-                    // Calculate based on size for better accuracy
-                    Progress = job.TotalSize > 0 ? (int)((job.TotalSize - job.SizeRemaining) * 100 / job.TotalSize) : 0,
-                    FilesRemaining = job.FilesRemaining,
-                    SizeRemaining = job.SizeRemaining,
+                    Progress = progress,
+                    FilesRemaining = Math.Max(0, job.FilesRemaining),
+                    SizeRemaining = Math.Max(0, job.SizeRemaining),
+                    SourceDirectory = job.SourcePath ?? string.Empty,
+                    TargetDirectory = job.TargetPath ?? string.Empty,
                     CurrentSource = job.CurrentSourceFile ?? string.Empty,
-                    CurrentDestination = job.CurrentTargetFile ?? string.Empty
+                    CurrentDestination = job.CurrentTargetFile ?? string.Empty,
+                    CompletedAt = completedAt
                 };
 
-                _history.Add(entry);
-
-                // 2. Write the entire history to disk (so external viewers can follow a live feed)
-                try
-                {
-                    var options = new JsonSerializerOptions { WriteIndented = true };
-                    string jsonString = JsonSerializer.Serialize(_history, options);
-                    File.WriteAllText(_stateFilePath, jsonString);
-                }
-                catch (IOException)
-                {
-                    // Fail silently or log to console
-                }
+                WriteFile();
             }
+        }
+
+        private static int ComputeProgressPercent(BackupJob job)
+        {
+            if (job.State == JobState.Completed)
+                return 100;
+
+            if (job.TotalSize > 0)
+            {
+                long transferred = job.TotalSize - job.SizeRemaining;
+                if (transferred < 0) transferred = 0;
+                if (transferred > job.TotalSize) transferred = job.TotalSize;
+                return (int)(transferred * 100L / job.TotalSize);
+            }
+
+            // No byte total (empty tree): derive from file counts
+            if (job.TotalFiles > 0)
+            {
+                int done = job.TotalFiles - Math.Max(0, job.FilesRemaining);
+                if (done < 0) done = 0;
+                if (done > job.TotalFiles) done = job.TotalFiles;
+                return done * 100 / job.TotalFiles;
+            }
+
+            return 0;
+        }
+
+        // Called after 5s timer to remove the job entry
+        public void ClearJobState(string jobName)
+        {
+            lock (_fileLock)
+            {
+                _states.Remove(jobName);
+                WriteFile();
+            }
+        }
+
+        private void WriteFile()
+        {
+            try
+            {
+                var options = new JsonSerializerOptions
+                { WriteIndented = true };
+                var list = new List<JobStateData>(_states.Values);
+                string json = JsonSerializer.Serialize(list, options);
+                File.WriteAllText(_stateFilePath, json);
+            }
+            catch (IOException) { }
         }
     }
 }

@@ -1,5 +1,3 @@
-﻿
-using EasyLog;
 using EasyLog;
 using EasySave.Core.Strategies;
 using EasySave.Strategies;
@@ -11,11 +9,9 @@ using System.Threading;
 namespace EasySave.Models
 {
     /// <summary>
-    /// Represents a single backup task with its configuration and current state.
-    /// </summary>
     public class BackupJob
     {
-        // Basic properties for the job
+        // Basic properties
         public string Name { get; set; }
         public string SourcePath { get; set; }
         public string TargetPath { get; set; }
@@ -29,40 +25,29 @@ namespace EasySave.Models
         public string CurrentSourceFile { get; set; }
         public string CurrentTargetFile { get; set; }
 
-        // Strategy used (Full or Differential)
+        // Strategy (Full or Differential)
         private readonly IBackupStrategy _strategy;
 
-        // Event used for the Observer pattern
+        // Observer pattern event
         public event EventHandler ProgressUpdated;
 
-        private readonly ManualResetEventSlim _pauseGate = new ManualResetEventSlim(true);
+        // Pause / Cancel controls
+        private readonly ManualResetEventSlim _pauseGate
+            = new ManualResetEventSlim(true);
         private int _cancelRequested;
-        // Encryption Service 
+        private int _stateCleanupGeneration;
+
+        // Dependencies injected by BackupManager
         public EncryptionService Encryption { get; set; }
         public string EncryptionKey { get; set; }
-
-
-        //needed to check business software during execution
         public BusinessSoftwareService BusinessService { get; set; }
         public AppSettings Settings { get; set; }
 
-        private static int _globalPriorityFilesCount = 0;
-        // Track priority files for THIS specific job instance
-        public int LocalPriorityFilesCount { get; set; }
+        // Reference to StateManager for the 5s Inactive timer
+        public StateManager StateManager { get; set; }
 
-        public static bool OthersHavePriority(int myCount)
-        {
-            // Only wait if the global total is higher than my own total
-            return Volatile.Read(ref _globalPriorityFilesCount) > myCount;
-        }
-
-        public static void IncrementGlobalPriority() => Interlocked.Increment(ref _globalPriorityFilesCount);
-        public static void DecrementGlobalPriority() => Interlocked.Decrement(ref _globalPriorityFilesCount);
-
-        // Allows exactly ONE thread at a time
-        public static readonly SemaphoreSlim LargeFileSemaphore = new SemaphoreSlim(1, 1);
-
-        public BackupJob(string name, string source, string target, IBackupStrategy strategy)
+        public BackupJob(string name, string source,
+                         string target, IBackupStrategy strategy)
         {
             Name = name;
             SourcePath = source;
@@ -70,25 +55,23 @@ namespace EasySave.Models
             _strategy = strategy;
             State = JobState.Inactive;
             BusinessService = new BusinessSoftwareService();
-
         }
 
-        public IBackupStrategy GetStrategy()
+        public IBackupStrategy GetStrategy() => _strategy;
+
+        public void Execute()
         {
-            return _strategy;
-        }
-        /// <summary>
-        /// Starts the backup process using the assigned strategy.
-        /// </summary>
-        /// <summary>
-        /// Executes the backup job with pre-flight path validation.
-        /// </summary>
-        public async Task Execute()
-        {
-            // CHECK #1 — before the backup starts
-            if (Settings != null && BusinessService != null && BusinessService.IsBusinessSoftwareRunning(Settings.BusinessSoftwareName))
+            // Invalidate any pending "completed → cleanup" work from a prior run
+            Interlocked.Increment(ref _stateCleanupGeneration);
+
+            // CHECK #1 — block if business software is running
+            if (Settings != null && BusinessService != null &&
+                BusinessService.IsBusinessSoftwareRunning(
+                    Settings.BusinessSoftwareName))
             {
-                string detected = BusinessService.GetDetectedSoftwareName(Settings.BusinessSoftwareName);
+                string detected = BusinessService
+                    .GetDetectedSoftwareName(Settings.BusinessSoftwareName);
+
                 State = JobState.Cancelled;
                 FilesRemaining = 0;
                 SizeRemaining = 0;
@@ -106,73 +89,79 @@ namespace EasySave.Models
                 NotifyProgress();
                 return;
             }
-            this.State = JobState.Active;
+
+            State = JobState.Active;
             NotifyProgress();
 
-            // 1. SOURCE CHECK: Verify that the source directory actually exists
+            // CHECK #2 — source path must exist
             if (!Directory.Exists(SourcePath))
             {
                 HandlePathError("Source path not found or disconnected.");
-                return; // Safely abort the execution
+                return;
             }
 
-            // 2. TARGET CHECK: Ensure the target exists, or attempt to create it
+            // CHECK #3 — target path must be accessible
             try
             {
                 if (!Directory.Exists(TargetPath))
-                {
                     Directory.CreateDirectory(TargetPath);
-                }
             }
-            catch (Exception)
+            catch
             {
-                // Catches errors like UnauthorizedAccessException or if a network drive is offline
                 HandlePathError("Target path could not be accessed or created.");
-                return; // Safely abort the execution
+                return;
             }
-            await Task.Run(() => CalculateInitialStats());
-            // Register this job's priority files globally
-            for (int i = 0; i < LocalPriorityFilesCount; i++)
-                IncrementGlobalPriority();
 
-            // 3. EXECUTION: If both paths are valid, proceed with the Strategy
+            // EXECUTE
             try
             {
-                // Offload the heavy scanning to a background thread to keep UI responsive
-                // CRITICAL: The Strategy must now be Awaited
-                await _strategy.ExecuteBackupAsync(SourcePath, TargetPath, this);
+                CalculateInitialStats();
+                _strategy.ExecuteBackup(SourcePath, TargetPath, this);
 
-                // Only mark as completed if the strategy didn't encounter internal fatal errors
-                if (this.State != JobState.Error && this.State != JobState.Cancelled)
+                if (State != JobState.Error && State != JobState.Cancelled)
                 {
-                    this.State = JobState.Completed;
+                    // Mark as Completed — keep last file paths for one state.json snapshot
+                    State = JobState.Completed;
+                    FilesRemaining = 0;
+                    SizeRemaining = 0;
+                    NotifyProgress();
+
+                    CurrentSourceFile = string.Empty;
+                    CurrentTargetFile = string.Empty;
+
+                    // After 5 seconds: Inactive + remove from state.json (direct StateManager
+                    // call because BackupManager unsubscribes ProgressUpdated in finally).
+                    int generation = Volatile.Read(ref _stateCleanupGeneration);
+                    var jobRef = this;
+                    var stateRef = this.StateManager;
+                    ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        Thread.Sleep(5000);
+                        if (Volatile.Read(ref jobRef._stateCleanupGeneration) != generation)
+                            return;
+
+                        jobRef.State = JobState.Inactive;
+                        stateRef?.ClearJobState(jobRef.Name);
+                    });
                 }
             }
             catch (OperationCanceledException)
             {
-                this.State = JobState.Cancelled;
+                State = JobState.Cancelled;
+                NotifyProgress();
             }
             catch (Exception)
             {
-                this.State = JobState.Error;
-            }
-            finally
-            {
-                while (LocalPriorityFilesCount > 0)
-                {
-                    DecrementGlobalPriority();
-                    LocalPriorityFilesCount--;
-                }
+                State = JobState.Error;
                 NotifyProgress();
             }
         }
 
-
         public void RequestPause()
         {
             if (State != JobState.Active) return;
-            State = JobState.Paused;
             _pauseGate.Reset();
+            State = JobState.Paused;
             NotifyProgress();
         }
 
@@ -187,7 +176,7 @@ namespace EasySave.Models
         public void RequestCancel()
         {
             Interlocked.Exchange(ref _cancelRequested, 1);
-            _pauseGate.Set(); // unblock if paused, so CheckPauseAndCancellation can throw
+            _pauseGate.Set();
             State = JobState.Cancelled;
             NotifyProgress();
         }
@@ -199,75 +188,57 @@ namespace EasySave.Models
 
             if (!_pauseGate.IsSet)
             {
-                // Wait with a timeout to prevent infinite blocking
-                // If timeout occurs, check cancellation again
-                if (!_pauseGate.Wait(1000))
-                {
-                    // Timeout occurred, check if cancel was requested
-                    if (Volatile.Read(ref _cancelRequested) == 1)
-                        throw new OperationCanceledException();
+                State = JobState.Paused;
+                NotifyProgress();
+                _pauseGate.Wait();
 
-                    // Still paused, continue waiting
-                    return;
-                }
-
-                // Gate was set (resumed), check one more time for cancellation
                 if (Volatile.Read(ref _cancelRequested) == 1)
                     throw new OperationCanceledException();
+
+                State = JobState.Active;
+                NotifyProgress();
             }
         }
 
-        /// <summary>
-        /// Helper method to centralize error handling and logging for missing paths.
-        /// </summary>
         private void HandlePathError(string errorMessage)
         {
-            this.State = JobState.Error;
+            State = JobState.Error;
+            FilesRemaining = 0;
+            SizeRemaining = 0;
+            CurrentSourceFile = errorMessage;
 
-            // Set remaining values to 0 since the job is aborted
-            this.FilesRemaining = 0;
-            this.SizeRemaining = 0;
-            this.CurrentSourceFile = errorMessage;
-
-            // Log the critical failure using your EasyLogger DLL
-            // TransferTimeMs = -1 is the standard indicator for a failed transfer
             EasyLogger.Instance.WriteLog(new LogEntry
             {
                 Timestamp = DateTime.Now,
-                BackupName = this.Name,
-                SourceFilePath = this.SourcePath,
-                TargetFilePath = this.TargetPath,
+                BackupName = Name,
+                SourceFilePath = SourcePath,
+                TargetFilePath = TargetPath,
                 FileSize = 0,
                 TransferTimeMs = -1
             });
 
-            // Trigger the event so the UI and state.json update immediately
             NotifyProgress();
         }
-        /// <summary>
-        /// Scans the source directory to provide totals for the real-time status file.
-        /// </summary>
+
         private void CalculateInitialStats()
         {
-            
-            var files = Directory.GetFiles(SourcePath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(
+                SourcePath, "*.*", SearchOption.AllDirectories);
+
             TotalFiles = files.Length;
             FilesRemaining = TotalFiles;
-
             TotalSize = 0;
-            foreach (var file in files)
-            {
-                TotalSize += new FileInfo(file).Length;
-            }
-            SizeRemaining = TotalSize;
-            // Calculate how many priority files this specific job has
-            int LocalPriorityFilesCount = files.Count(f => Settings.PriorityExtensions.Contains(Path.GetExtension(f)));
 
+            foreach (var file in files)
+                TotalSize += new FileInfo(file).Length;
+
+            SizeRemaining = TotalSize;
+            CurrentSourceFile = string.Empty;
+            CurrentTargetFile = string.Empty;
+
+            NotifyProgress(); // write initial state immediately
         }
 
-        /// <summary>
-        /// Broadcasts an update to all listeners (Observers).
-        /// </summary>
         public void NotifyProgress()
         {
             ProgressUpdated?.Invoke(this, EventArgs.Empty);
