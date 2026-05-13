@@ -260,43 +260,6 @@
                         </StackPanel>
 
                         <StackPanel Grid.Row="5" Margin="0,0,0,12">
-                            <TextBlock Text="{Binding SettingsCryptoSoftPathText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <DockPanel LastChildFill="True">
-                                <Button Content="{Binding BrowseText}"
-                                        Command="{Binding BrowseCryptoSoftCommand}"
-                                        Width="90"
-                                        Padding="8,3"
-                                        Margin="0,0,8,0"
-                                        DockPanel.Dock="Right">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsCryptoSoftMissing}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                </Button>
-                                <TextBox Text="{Binding CryptoSoftPathInput, UpdateSourceTrigger=PropertyChanged}" />
-                            </DockPanel>
-                            <TextBlock Text="{Binding CryptoSoftNotFoundText}"
-                                       Foreground="#B54708"
-                                       FontSize="11"
-                                       Margin="0,4,0,0">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsCryptoSoftMissing}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-
                         </StackPanel>
 
                         <Button Grid.Row="6"
