@@ -30,7 +30,6 @@ namespace EasySave.WPF
         private string _selectedLogFormat = "JSON";
         private string _encryptedExtensionsInput = string.Empty;
         private string _businessSoftwareInput = string.Empty;
-        private string _cryptoSoftPathInput = string.Empty;
         private bool _isModifyPanelOpen;
 
         public ObservableCollection<JobViewModel> Jobs { get; } = new ObservableCollection<JobViewModel>();
@@ -108,21 +107,6 @@ namespace EasySave.WPF
             }
         }
 
-        public string CryptoSoftPathInput
-        {
-            get => _cryptoSoftPathInput;
-            set
-            {
-                if (_cryptoSoftPathInput == value) return;
-                _cryptoSoftPathInput = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(IsCryptoSoftMissing));
-            }
-        }
-
-        public bool IsCryptoSoftMissing
-            => string.IsNullOrWhiteSpace(CryptoSoftPathInput) || !File.Exists(CryptoSoftPathInput);
-
         public bool IsModifyPanelOpen
         {
             get => _isModifyPanelOpen;
@@ -154,8 +138,6 @@ namespace EasySave.WPF
         public string SettingsLogFormatText => LocalizationManager.Instance.GetString("GuiSettingsLogFormat");
         public string SettingsExtensionsText => LocalizationManager.Instance.GetString("GuiSettingsExtensions");
         public string SettingsBlockingAppsText => LocalizationManager.Instance.GetString("GuiSettingsBlockingApps");
-        public string SettingsCryptoSoftPathText => LocalizationManager.Instance.GetString("GuiSettingsCryptoSoftPath");
-        public string CryptoSoftNotFoundText => LocalizationManager.Instance.GetString("GuiCryptoSoftNotFound");
 
         public string LabelNameText => LocalizationManager.Instance.GetString("LabelName");
         public string LabelSourceText => LocalizationManager.Instance.GetString("LabelSource");
@@ -241,7 +223,6 @@ namespace EasySave.WPF
         public ICommand ModifyJobCommand { get; }
         public ICommand OpenModifyPanelCommand { get; }
         public ICommand CloseModifyPanelCommand { get; }
-        public ICommand BrowseCryptoSoftCommand { get; }
 
         public MainViewModel()
         {
@@ -257,7 +238,6 @@ namespace EasySave.WPF
             _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
             _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
             _businessSoftwareInput = string.Join(", ", _currentSettings.BusinessSoftwareName ?? new System.Collections.Generic.List<string>());
-            _cryptoSoftPathInput = _currentSettings.CryptoSoftPath ?? string.Empty;
 
             _backupManager = new BackupManager();
 
@@ -313,10 +293,6 @@ namespace EasySave.WPF
 
             CloseModifyPanelCommand = new RelayCommand(
                 execute: () => IsModifyPanelOpen = false,
-                canExecute: () => !IsBusy);
-
-            BrowseCryptoSoftCommand = new RelayCommand(
-                execute: BrowseCryptoSoft,
                 canExecute: () => !IsBusy);
         }
 
@@ -401,8 +377,6 @@ namespace EasySave.WPF
             OnPropertyChanged(nameof(SettingsLogFormatText));
             OnPropertyChanged(nameof(SettingsExtensionsText));
             OnPropertyChanged(nameof(SettingsBlockingAppsText));
-            OnPropertyChanged(nameof(SettingsCryptoSoftPathText));
-            OnPropertyChanged(nameof(CryptoSoftNotFoundText));
             OnPropertyChanged(nameof(LabelNameText));
             OnPropertyChanged(nameof(LabelSourceText));
             OnPropertyChanged(nameof(LabelTargetText));
@@ -439,33 +413,6 @@ namespace EasySave.WPF
             return dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK
                 ? dialog.SelectedPath
                 : null;
-        }
-
-        private void BrowseCryptoSoft()
-        {
-            var initialDirectory = string.Empty;
-            if (!string.IsNullOrWhiteSpace(CryptoSoftPathInput))
-            {
-                var directory = Path.GetDirectoryName(CryptoSoftPathInput);
-                if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
-                {
-                    initialDirectory = directory;
-                }
-            }
-
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Executable (*.exe)|*.exe",
-                FileName = "CryptoSoft.exe",
-                InitialDirectory = initialDirectory,
-                CheckFileExists = true,
-                Multiselect = false
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                CryptoSoftPathInput = dialog.FileName;
-            }
         }
 
         private async Task CreateJobAsync()
@@ -552,14 +499,10 @@ namespace EasySave.WPF
         {
             _currentSettings.Language = SelectedLanguage;
             _currentSettings.LogFormat = SelectedLogFormat;
-            _currentSettings.CryptoSoftPath = string.IsNullOrWhiteSpace(CryptoSoftPathInput)
-                ? string.Empty
-                : CryptoSoftPathInput.Trim();
             _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
             _currentSettings.BusinessSoftwareName = ParseCsvList(BusinessSoftwareInput, ensureDotPrefix: false);
             _settingsManager.SaveSettings(_currentSettings);
             ApplyLanguage(SelectedLanguage);
-            OnPropertyChanged(nameof(IsCryptoSoftMissing));
         }
 
         private static System.Collections.Generic.List<string> ParseCsvList(string? input, bool ensureDotPrefix)

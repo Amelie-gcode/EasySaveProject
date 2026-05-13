@@ -68,7 +68,7 @@ namespace EasySave.Models
                 var options = new JsonSerializerOptions { WriteIndented = true };
 
 
-                // Do not mutate the in-memory object, otherwise the key can be re-protected repeatedly.
+                // Do not mutate the in-memory object
                 var normalizedKey = NormalizeEncryptionKey(settings.EncryptionKey);
                 var settingsToSave = new AppSettings
                 {
@@ -76,8 +76,8 @@ namespace EasySave.Models
                     LogFormat = settings.LogFormat,
                     ThemeMode = settings.ThemeMode,
                     EncryptedExtensions = settings.EncryptedExtensions ?? new List<string>(),
-                    CryptoSoftPath = settings.CryptoSoftPath,
-                    EncryptionKey = SecurityHelper.Protect(string.IsNullOrWhiteSpace(normalizedKey) ? "default" : normalizedKey),
+                    CryptoSoftPath = NormalizeCryptoSoftPath(settings.CryptoSoftPath),
+                    EncryptionKey = string.IsNullOrWhiteSpace(normalizedKey) ? "default" : normalizedKey,
                     BusinessSoftwareName = settings.BusinessSoftwareName ?? new List<string>(),
                     PriorityExtensions = settings.PriorityExtensions ?? new List<string>()
                 };
@@ -95,43 +95,47 @@ namespace EasySave.Models
 
         private static string ResolveCryptoSoftPath(string? configuredPath)
         {
-            if (!string.IsNullOrWhiteSpace(configuredPath) && File.Exists(configuredPath))
-            {
-                return configuredPath;
-            }
-
-            var detectedPath = FindCryptoSoftInProjectHierarchy();
-            if (!string.IsNullOrWhiteSpace(detectedPath))
-            {
-                return detectedPath;
-            }
-
-            return string.IsNullOrWhiteSpace(configuredPath)
-                ? Path.Combine(AppContext.BaseDirectory, "CryptoSoft.exe")
+            // Use the default path from AppSettings if not configured
+            string pathToResolve = string.IsNullOrWhiteSpace(configuredPath)
+                ? new AppSettings().CryptoSoftPath
                 : configuredPath;
+
+            // If the path is relative, make it absolute using the application base directory
+            if (!Path.IsPathRooted(pathToResolve))
+            {
+                pathToResolve = Path.Combine(AppContext.BaseDirectory, pathToResolve);
+            }
+
+            return pathToResolve;
         }
 
-        private static string? FindCryptoSoftInProjectHierarchy()
+        private static string NormalizeCryptoSoftPath(string? absolutePath)
         {
-            var current = new DirectoryInfo(AppContext.BaseDirectory);
-            while (current != null)
+            if (string.IsNullOrWhiteSpace(absolutePath))
             {
-                var directPath = Path.Combine(current.FullName, "CryptoSoft.exe");
-                if (File.Exists(directPath))
-                {
-                    return directPath;
-                }
-
-                var subFolderPath = Path.Combine(current.FullName, "CryptoSoft", "CryptoSoft.exe");
-                if (File.Exists(subFolderPath))
-                {
-                    return subFolderPath;
-                }
-
-                current = current.Parent;
+                return new AppSettings().CryptoSoftPath;
             }
 
-            return null;
+            // If the path is absolute, try to convert it to relative
+            if (Path.IsPathRooted(absolutePath))
+            {
+                try
+                {
+                    string basePath = AppContext.BaseDirectory;
+                    if (absolutePath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Remove the base directory to get the relative path
+                        string relativePath = absolutePath.Substring(basePath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        return relativePath;
+                    }
+                }
+                catch
+                {
+                    // If conversion fails, return the absolute path as-is
+                }
+            }
+
+            return absolutePath;
         }
 
         private static string NormalizeEncryptionKey(string? rawKey)
@@ -141,27 +145,7 @@ namespace EasySave.Models
                 return "default";
             }
 
-            string current = rawKey;
-
-            // Handles accidental multiple DPAPI protections by unwrapping layers.
-            for (int i = 0; i < 8; i++)
-            {
-                try
-                {
-                    string next = SecurityHelper.Unprotect(current);
-                    if (string.Equals(next, current, StringComparison.Ordinal))
-                    {
-                        break;
-                    }
-                    current = next;
-                }
-                catch
-                {
-                    break;
-                }
-            }
-
-            return string.IsNullOrWhiteSpace(current) ? "default" : current;
+            return rawKey.Trim();
         }
     }
 }
