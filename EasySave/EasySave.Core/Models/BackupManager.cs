@@ -88,7 +88,7 @@ namespace EasySave.Models
                 job.ProgressUpdated += _stateManager.OnJobProgressUpdated;
 
                 // Execute the business logic (which uses the Strategy pattern internally)
-                job.Execute();
+                await job.Execute();
             }
             finally
             {

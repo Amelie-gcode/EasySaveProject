@@ -103,29 +103,45 @@ namespace EasySave.Models
         {
             lock (_fileLock) // Protects both the history list and the File I/O
             {
-                // 1. Create a new snapshot entry and append it to the history
+                // 1. Create or update the snapshot for this job in the history
+                var existing = _history.FirstOrDefault(h => string.Equals(h.Name, job.Name, StringComparison.OrdinalIgnoreCase));
+                int progress = job.TotalSize > 0 ? (int)((job.TotalSize - job.SizeRemaining) * 100 / job.TotalSize) : 0;
+
                 var entry = new JobStateData
                 {
                     Name = job.Name,
-                    LastUpdate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    LastUpdate = job.LastUpdate ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     Status = job.State.ToString(),
                     TotalFiles = job.TotalFiles,
                     TotalSize = job.TotalSize,
                     // Calculate based on size for better accuracy
-                    Progress = job.TotalSize > 0 ? (int)((job.TotalSize - job.SizeRemaining) * 100 / job.TotalSize) : 0,
+                    Progress = progress,
                     FilesRemaining = job.FilesRemaining,
                     SizeRemaining = job.SizeRemaining,
                     CurrentSource = job.CurrentSourceFile ?? string.Empty,
                     CurrentDestination = job.CurrentTargetFile ?? string.Empty
                 };
 
+                if (existing != null)
+                {
+                    // Replace the old snapshot for this job so the file contains one entry per job
+                    _history.Remove(existing);
+                }
                 _history.Add(entry);
 
                 // 2. Write the entire history to disk (so external viewers can follow a live feed)
                 try
                 {
                     var options = new JsonSerializerOptions { WriteIndented = true };
-                    string jsonString = JsonSerializer.Serialize(_history, options);
+                    // Ensure the history is ordered by LastUpdate for a readable live feed
+                    // Keep a single entry per job: we want current states only, ordered by name for deterministic output
+                    var currentStates = _history
+                        .GroupBy(h => h.Name, StringComparer.OrdinalIgnoreCase)
+                        .Select(g => g.OrderByDescending(x => x.LastUpdate).First())
+                        .OrderBy(h => h.Name)
+                        .ToList();
+                    var ordered = currentStates;
+                    string jsonString = JsonSerializer.Serialize(ordered, options);
                     File.WriteAllText(_stateFilePath, jsonString);
                 }
                 catch (IOException)

@@ -28,6 +28,7 @@ namespace EasySave.Models
         public long SizeRemaining { get; set; }
         public string CurrentSourceFile { get; set; }
         public string CurrentTargetFile { get; set; }
+        public string LastUpdate { get; set; }
 
         // Strategy used (Full or Differential)
         private readonly IBackupStrategy _strategy;
@@ -37,6 +38,7 @@ namespace EasySave.Models
 
         private readonly ManualResetEventSlim _pauseGate = new ManualResetEventSlim(true);
         private int _cancelRequested;
+        private DateTime _lastProgressNotify = DateTime.MinValue;
         // Encryption Service 
         public EncryptionService Encryption { get; set; }
         public string EncryptionKey { get; set; }
@@ -163,7 +165,8 @@ namespace EasySave.Models
                     DecrementGlobalPriority();
                     LocalPriorityFilesCount--;
                 }
-                NotifyProgress();
+                // Ensure final state update is persisted
+                NotifyProgress(force: true);
             }
         }
 
@@ -261,15 +264,25 @@ namespace EasySave.Models
             }
             SizeRemaining = TotalSize;
             // Calculate how many priority files this specific job has
-            int LocalPriorityFilesCount = files.Count(f => Settings.PriorityExtensions.Contains(Path.GetExtension(f)));
+            this.LocalPriorityFilesCount = files.Count(f => Settings.PriorityExtensions.Contains(Path.GetExtension(f)));
 
         }
 
         /// <summary>
         /// Broadcasts an update to all listeners (Observers).
         /// </summary>
-        public void NotifyProgress()
+        public void NotifyProgress(bool force = false)
         {
+            var now = DateTime.Now;
+            if (!force && (now - _lastProgressNotify).TotalMilliseconds < 200)
+            {
+                // Throttle frequent updates to avoid UI/File I/O overload
+                return;
+            }
+
+            _lastProgressNotify = now;
+            // Update last update timestamp for both UI and state file
+            LastUpdate = now.ToString("yyyy-MM-dd HH:mm:ss");
             ProgressUpdated?.Invoke(this, EventArgs.Empty);
         }
     }
