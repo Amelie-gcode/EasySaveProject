@@ -18,12 +18,19 @@ namespace EasyLog
 
         // New property for encryption time
         public long EncryptionTimeMs { get; set; }
+
+        public string MachineName { get; set; }
+
+        public string UserName { get; set; }
+
         public LogEntry()
         {
             Timestamp = DateTime.UtcNow;
             BackupName = string.Empty;
             SourceFilePath = string.Empty;
             TargetFilePath = string.Empty;
+            MachineName = string.Empty;
+            UserName = string.Empty;
         }
     }
 }

@@ -130,6 +130,8 @@ namespace EasySave.Views
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption2"));
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption3"));
             Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption4"));
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption5"));
+            Console.WriteLine(_viewModel.GetString("MenuChangeSettingsOption6"));
             Console.WriteLine();
             Console.Write(_viewModel.GetString("PromptSelectSettingToChange"));
             string input = ReadUserInput();
@@ -150,7 +152,12 @@ namespace EasySave.Views
                 case "4":
                     ChangeKeyEncryption();
                     break;
-                // Cases for other settings would go here
+                case "5":
+                    ChangeLogDestinationMenu();
+                    break;
+                case "6":
+                    ChangeLogCentralizerUrlMenu();
+                    break;
                 default:
                     Console.WriteLine();
                     Console.WriteLine(_viewModel.GetString("ErrorInvalidSettingOption"));
@@ -168,6 +175,37 @@ namespace EasySave.Views
                 _viewModel.ChangeLogFormatCommand(input);
                 // This message will now print in the newly selected type!
                 Console.WriteLine(_viewModel.GetString("MsgLogTypeChanged"));
+            }
+            Console.ReadKey();
+        }
+
+        private void ChangeLogDestinationMenu()
+        {
+            Console.Write(_viewModel.GetString("PromptLogDestination"));
+            string input = ReadUserInput();
+            if (string.Equals(input, "Local", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(input, "Centralized", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(input, "Both", StringComparison.OrdinalIgnoreCase))
+            {
+                string destination = input.Equals("Both", StringComparison.OrdinalIgnoreCase)
+                    ? "Both"
+                    : input.Equals("Centralized", StringComparison.OrdinalIgnoreCase)
+                        ? "Centralized"
+                        : "Local";
+                _viewModel.ChangeLogDestinationCommand(destination);
+                Console.WriteLine(_viewModel.GetString("MsgLogDestinationChanged"));
+            }
+            Console.ReadKey();
+        }
+
+        private void ChangeLogCentralizerUrlMenu()
+        {
+            Console.Write(_viewModel.GetString("PromptLogCentralizerUrl"));
+            string input = ReadUserInput();
+            if (!string.IsNullOrWhiteSpace(input))
+            {
+                _viewModel.ChangeLogCentralizerUrlCommand(input.Trim());
+                Console.WriteLine(_viewModel.GetString("MsgLogCentralizerUrlChanged"));
             }
             Console.ReadKey();
         }

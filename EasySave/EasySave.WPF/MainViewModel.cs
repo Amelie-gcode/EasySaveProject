@@ -29,6 +29,8 @@ namespace EasySave.WPF
         private bool _isDifferential;
         private string _selectedLanguage = "EN";
         private string _selectedLogFormat = "JSON";
+        private string _selectedLogDestination = "Local";
+        private string _logCentralizerUrl = "http://localhost:5080";
         private string _encryptedExtensionsInput = string.Empty;
         private string _businessSoftwareInput = string.Empty;
         private string _priorityExtensionsInput = string.Empty;
@@ -84,6 +86,44 @@ namespace EasySave.WPF
                     normalized = "JSON";
                 if (_selectedLogFormat == normalized) return;
                 _selectedLogFormat = normalized;
+                OnPropertyChanged();
+            }
+        }
+
+        public string SelectedLogDestination
+        {
+            get => _selectedLogDestination;
+            set
+            {
+                var normalized = NormalizeLogDestination(value);
+                if (_selectedLogDestination == normalized) return;
+                _selectedLogDestination = normalized;
+                OnPropertyChanged();
+            }
+        }
+
+        private static string NormalizeLogDestination(string? value)
+        {
+            switch ((value ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "CENTRALIZED":
+                case "CENTRAL":
+                    return "Centralized";
+                case "BOTH":
+                    return "Both";
+                default:
+                    return "Local";
+            }
+        }
+
+        public string LogCentralizerUrl
+        {
+            get => _logCentralizerUrl;
+            set
+            {
+                var normalized = (value ?? string.Empty).Trim();
+                if (_logCentralizerUrl == normalized) return;
+                _logCentralizerUrl = normalized;
                 OnPropertyChanged();
             }
         }
@@ -160,6 +200,8 @@ namespace EasySave.WPF
         public string TargetHeaderText => LocalizationManager.Instance.GetString("LabelTarget");
         public string SettingsLanguageText => LocalizationManager.Instance.GetString("GuiSettingsLanguage");
         public string SettingsLogFormatText => LocalizationManager.Instance.GetString("GuiSettingsLogFormat");
+        public string SettingsLogDestinationText => LocalizationManager.Instance.GetString("GuiSettingsLogDestination");
+        public string SettingsLogCentralizerUrlText => LocalizationManager.Instance.GetString("GuiSettingsLogCentralizerUrl");
         public string SettingsExtensionsText => LocalizationManager.Instance.GetString("GuiSettingsExtensions");
         public string SettingsBlockingAppsText => LocalizationManager.Instance.GetString("GuiSettingsBlockingApps");
         public string SettingsPriorityText => LocalizationManager.Instance.GetString("GuiSettingsPriority");
@@ -264,6 +306,12 @@ namespace EasySave.WPF
             LocalizationManager.Instance.SetLanguage(_currentSettings.Language);
             _selectedLanguage = LocalizationManager.Instance.CurrentLanguage;
             _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
+            _selectedLogDestination = string.IsNullOrWhiteSpace(_currentSettings.LogDestination)
+                ? "Local"
+                : LogBootstrapper.ToSettingValue(LogBootstrapper.ParseDestination(_currentSettings.LogDestination));
+            _logCentralizerUrl = string.IsNullOrWhiteSpace(_currentSettings.LogCentralizerUrl)
+                ? "http://localhost:5080"
+                : _currentSettings.LogCentralizerUrl;
             _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
             _businessSoftwareInput = string.Join(", ", _currentSettings.BusinessSoftwareName ?? new System.Collections.Generic.List<string>());
             _priorityExtensionsInput = string.Join(", ", _currentSettings.PriorityExtensions ?? new List<string>());
@@ -410,6 +458,8 @@ namespace EasySave.WPF
             OnPropertyChanged(nameof(TargetHeaderText));
             OnPropertyChanged(nameof(SettingsLanguageText));
             OnPropertyChanged(nameof(SettingsLogFormatText));
+            OnPropertyChanged(nameof(SettingsLogDestinationText));
+            OnPropertyChanged(nameof(SettingsLogCentralizerUrlText));
             OnPropertyChanged(nameof(SettingsExtensionsText));
             OnPropertyChanged(nameof(SettingsBlockingAppsText));
             OnPropertyChanged(nameof(LabelNameText));
@@ -536,6 +586,8 @@ namespace EasySave.WPF
         {
             _currentSettings.Language = SelectedLanguage;
             _currentSettings.LogFormat = SelectedLogFormat;
+            _currentSettings.LogDestination = SelectedLogDestination;
+            _currentSettings.LogCentralizerUrl = LogCentralizerUrl;
             _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
             _currentSettings.BusinessSoftwareName = ParseCsvList(BusinessSoftwareInput, ensureDotPrefix: false);
             
@@ -547,6 +599,7 @@ namespace EasySave.WPF
             }
            
             _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
             ApplyLanguage(SelectedLanguage);
         }
 
