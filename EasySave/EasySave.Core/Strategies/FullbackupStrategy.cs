@@ -108,8 +108,11 @@ namespace EasySave.Strategies
                     jobContext.CurrentSourceFile = sourceFile;
                     jobContext.CurrentTargetFile = targetFile;
 
-                    // Notify state that we are starting this specific file
-                    jobContext.NotifyProgress();
+                    // Notify state that we are starting this specific file (force immediate)
+                    jobContext.NotifyProgress(force: true);
+
+                    // Small delay so external viewers can observe the live update (for demo/visibility)
+                    await Task.Delay(200);
 
 
                     if (requiresEncryption)
@@ -141,6 +144,8 @@ namespace EasySave.Strategies
                     // 3. Update Progress Counters immediately after success
                     jobContext.FilesRemaining--;
                     // SizeRemaining is updated during the copy to keep progress smooth.
+                    // After finishing this file, ensure final progress is pushed
+                    jobContext.NotifyProgress(force: true);
                 }
                 catch (OperationCanceledException)
                 {

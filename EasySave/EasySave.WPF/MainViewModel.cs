@@ -639,6 +639,12 @@ namespace EasySave.WPF
 
             public string TargetPath => _job.TargetPath;
 
+            public string LastUpdate => _job.LastUpdate;
+
+            public int FilesRemaining => _job.FilesRemaining;
+
+            public long SizeRemaining => _job.SizeRemaining;
+
             public JobState State => _job.State;
 
             public bool IsDifferential => _job.GetStrategy() is DifferentialBackupStrategy;
@@ -733,6 +739,9 @@ namespace EasySave.WPF
                     OnPropertyChanged(nameof(TargetPath));
                     OnPropertyChanged(nameof(IsDifferential));
                     OnPropertyChanged(nameof(ProgressPercent));
+                    OnPropertyChanged(nameof(LastUpdate));
+                    OnPropertyChanged(nameof(FilesRemaining));
+                    OnPropertyChanged(nameof(SizeRemaining));
 
                     (PauseResumeCommand as RelayCommand)?.RaiseCanExecuteChanged();
                     (CancelCommand as RelayCommand)?.RaiseCanExecuteChanged();

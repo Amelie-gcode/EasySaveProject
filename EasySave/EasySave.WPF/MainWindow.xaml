@@ -96,6 +96,16 @@
 
                                                     <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"/>
                                                     <TextBlock Text="{Binding TargetPath}" TextWrapping="Wrap" FontSize="12" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="Last: " FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="{Binding LastUpdate}" FontSize="11" Foreground="#666" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Files left: " FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="{Binding FilesRemaining}" FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="   Size left: " FontSize="11" Foreground="#666" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding SizeRemaining}" FontSize="11" Foreground="#666" />
+                                                    </StackPanel>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right" Margin="14,0,0,0">
