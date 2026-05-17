@@ -1,5 +1,6 @@
 ﻿using EasySave.Models;
 using EasySave.Strategies;
+using EasyLog;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -268,6 +269,12 @@ namespace EasySave.WPF
             _priorityExtensionsInput = string.Join(", ", _currentSettings.PriorityExtensions ?? new List<string>());
             _maxFileSizeInput = _currentSettings.MaxParallelSize.ToString();
             _backupManager = new BackupManager();
+
+            // Apply saved log format to the global logger
+            if (_selectedLogFormat == "XML")
+                EasyLogger.Instance.SetLogFormat(new XmlLogWriter());
+            else
+                EasyLogger.Instance.SetLogFormat(new JsonLogWriter());
 
             LoadJobs();
 
