@@ -11,6 +11,12 @@ namespace EasySave.Models
         // The preferred log format for Version 1.1 (e.g., "JSON" or "XML")
         public string LogFormat { get; set; } = "JSON";
 
+        // Local, Centralized, or Both
+        public string LogDestination { get; set; } = "Local";
+
+        // Base URL of the Docker log centralizer (e.g. http://log-server:5080)
+        public string LogCentralizerUrl { get; set; } = "http://localhost:5080";
+
         // Preferred visual mode for the UI ("Claire" or "Sombre").
         public string ThemeMode { get; set; } = "Claire";
 

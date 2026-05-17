@@ -229,17 +229,21 @@
                                 <RowDefinition Height="Auto" />
                                 <!-- 2: Log Format -->
                                 <RowDefinition Height="Auto" />
-                                <!-- 3: Encrypted Ext -->
+                                <!-- 3: Log Destination -->
                                 <RowDefinition Height="Auto" />
-                                <!-- 4: Business Apps -->
+                                <!-- 4: Centralizer URL -->
                                 <RowDefinition Height="Auto" />
-                                <!-- 5: Priority Ext -->
+                                <!-- 5: Encrypted Ext -->
                                 <RowDefinition Height="Auto" />
-                                <!-- 6: Max File Size -->
+                                <!-- 6: Business Apps -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 7: Priority Ext -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 8: Max File Size -->
                                 <RowDefinition Height="30" />
-                                <!-- 7: Spacer -->
+                                <!-- 9: Spacer -->
                                 <RowDefinition Height="Auto" />
-                                <!-- 8: Save Button -->
+                                <!-- 10: Save Button -->
                             </Grid.RowDefinitions>
 
                             <!-- Titre -->
@@ -265,32 +269,48 @@
                                 </ComboBox>
                             </StackPanel>
 
-                            <!-- Extensions à chiffrer -->
+                            <!-- Destination des logs -->
                             <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLogDestinationText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ComboBox SelectedValue="{Binding SelectedLogDestination}" SelectedValuePath="Tag" Height="28">
+                                    <ComboBoxItem Content="Local (PC)" Tag="Local" />
+                                    <ComboBoxItem Content="Centralized (Docker)" Tag="Centralized" />
+                                    <ComboBoxItem Content="Local + Centralized" Tag="Both" />
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- URL du centraliseur -->
+                            <StackPanel Grid.Row="4" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLogCentralizerUrlText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding LogCentralizerUrl, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
+
+                            <!-- Extensions à chiffrer -->
+                            <StackPanel Grid.Row="5" Margin="0,0,0,12">
                                 <TextBlock Text="{Binding SettingsExtensionsText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                 <TextBox Text="{Binding EncryptedExtensionsInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
                             </StackPanel>
 
                             <!-- Logiciels Métier -->
-                            <StackPanel Grid.Row="4" Margin="0,0,0,12">
+                            <StackPanel Grid.Row="6" Margin="0,0,0,12">
                                 <TextBlock Text="{Binding SettingsBlockingAppsText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                 <TextBox Text="{Binding BusinessSoftwareInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
                             </StackPanel>
 
                             <!-- Extensions Prioritaires -->
-                            <StackPanel Grid.Row="5" Margin="0,0,0,12">
+                            <StackPanel Grid.Row="7" Margin="0,0,0,12">
                                 <TextBlock Text="{Binding SettingsPriorityText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                 <TextBox Text="{Binding PriorityExtensionsInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
                             </StackPanel>
 
                             <!-- Taille Max Fichier (Ko) -->
-                            <StackPanel Grid.Row="6" Margin="0,0,0,12">
+                            <StackPanel Grid.Row="8" Margin="0,0,0,12">
                                 <TextBlock Text="{Binding SettingsMaxFileSizeText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
                                 <TextBox Text="{Binding MaxFileSizeInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
                             </StackPanel>
 
                             <!-- Bouton Sauvegarder -->
-                            <Button Grid.Row="8"
+                            <Button Grid.Row="10"
                                 Content="{Binding SaveText}"
                                 Command="{Binding SaveSettingsCommand}"
                                 MinWidth="120"

@@ -74,6 +74,8 @@ namespace EasySave.Models
                 {
                     Language = settings.Language,
                     LogFormat = settings.LogFormat,
+                    LogDestination = settings.LogDestination,
+                    LogCentralizerUrl = settings.LogCentralizerUrl,
                     ThemeMode = settings.ThemeMode,
                     EncryptedExtensions = settings.EncryptedExtensions ?? new List<string>(),
                     CryptoSoftPath = NormalizeCryptoSoftPath(settings.CryptoSoftPath),
