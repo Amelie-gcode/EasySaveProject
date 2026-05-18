@@ -60,6 +60,5 @@ flowchart LR
   OS -- may block --> UC2
   UC2 --> UC5
 
-  click UC7 href "../docker/README.md" "Centralizer details"
 ```
 
