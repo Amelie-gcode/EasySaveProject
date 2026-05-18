@@ -13,7 +13,6 @@
                 <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Margin="8" Background="#FFFFFF">
                     <StackPanel>
                         <TextBlock Text="{Binding CreateText}" FontSize="18" FontWeight="SemiBold" Foreground="#2D6CDF" Margin="0,0,0,12" />
-
                         <TextBlock Text="{Binding JobNameHeaderText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
                         <TextBox Text="{Binding JobName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" />
 
@@ -97,6 +96,16 @@
 
                                                     <TextBlock Text="{Binding SourcePath}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"/>
                                                     <TextBlock Text="{Binding TargetPath}" TextWrapping="Wrap" FontSize="12" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                        <TextBlock Text="Last: " FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="{Binding LastUpdate}" FontSize="11" Foreground="#666" />
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="Files left: " FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="{Binding FilesRemaining}" FontSize="11" Foreground="#666" />
+                                                        <TextBlock Text="   Size left: " FontSize="11" Foreground="#666" Margin="8,0,0,0" />
+                                                        <TextBlock Text="{Binding SizeRemaining}" FontSize="11" Foreground="#666" />
+                                                    </StackPanel>
                                                 </StackPanel>
 
                                                 <StackPanel Grid.Column="1" Orientation="Vertical" HorizontalAlignment="Right" Margin="14,0,0,0">
@@ -218,67 +227,121 @@
             </TabItem>
 
             <TabItem Header="Settings">
-                <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="12" Margin="8" Background="#FFFFFF">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
+                <!-- ScrollViewer indispensable pour éviter que le bas soit coupé sur les petits écrans -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Border BorderBrush="#B8C3D9" BorderThickness="1" CornerRadius="6" Padding="15" Margin="10" Background="#FFFFFF">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <!-- 0: Title -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 1: Language -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 2: Log Format -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 3: Log Destination -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 4: Centralizer URL -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 5: Encrypted Ext -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 6: Business Apps -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 7: Priority Ext -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 8: Max File Size -->
+                                <RowDefinition Height="30" />
+                                <!-- 9: Spacer -->
+                                <RowDefinition Height="Auto" />
+                                <!-- 10: Save Button -->
+                            </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="{Binding SettingsTitleText}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#2D6CDF" />
+                            <!-- Titre -->
+                            <TextBlock Grid.Row="0" Text="{Binding SettingsTitleText}" FontSize="18" FontWeight="Bold" Margin="0,0,0,15" Foreground="#2D6CDF" />
 
-                        <StackPanel Grid.Row="1" Margin="0,0,0,10">
-                            <TextBlock Text="{Binding SettingsLanguageText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <ComboBox SelectedValue="{Binding SelectedLanguage}" SelectedValuePath="Tag">
-                                <ComboBoxItem Content="English" Tag="EN" />
-                                <ComboBoxItem Content="Français" Tag="FR" />
-                                <ComboBoxItem Content="Español" Tag="ES" />
-                                <ComboBoxItem Content="العربية" Tag="AR" />
-                            </ComboBox>
-                        </StackPanel>
+                            <!-- Langue -->
+                            <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLanguageText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ComboBox SelectedValue="{Binding SelectedLanguage}" SelectedValuePath="Tag" Height="28">
+                                    <ComboBoxItem Content="English" Tag="EN" />
+                                    <ComboBoxItem Content="Français" Tag="FR" />
+                                    <ComboBoxItem Content="Español" Tag="ES" />
+                                    <ComboBoxItem Content="العربية" Tag="AR" />
+                                </ComboBox>
+                            </StackPanel>
 
-                        <StackPanel Grid.Row="2" Margin="0,0,0,10">
-                            <TextBlock Text="{Binding SettingsLogFormatText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <ComboBox SelectedValue="{Binding SelectedLogFormat}" SelectedValuePath="Tag">
-                                <ComboBoxItem Content="JSON" Tag="JSON" />
-                                <ComboBoxItem Content="XML" Tag="XML" />
-                            </ComboBox>
-                        </StackPanel>
+                            <!-- Format des Logs -->
+                            <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLogFormatText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ComboBox SelectedValue="{Binding SelectedLogFormat}" SelectedValuePath="Tag" Height="28">
+                                    <ComboBoxItem Content="JSON" Tag="JSON" />
+                                    <ComboBoxItem Content="XML" Tag="XML" />
+                                </ComboBox>
+                            </StackPanel>
 
-                        <StackPanel Grid.Row="3" Margin="0,0,0,10">
-                            <TextBlock Text="{Binding SettingsExtensionsText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding EncryptedExtensionsInput, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                            <!-- Destination des logs -->
+                            <StackPanel Grid.Row="3" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLogDestinationText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <ComboBox SelectedValue="{Binding SelectedLogDestination}" SelectedValuePath="Tag" Height="28">
+                                    <ComboBoxItem Content="Local (PC)" Tag="Local" />
+                                    <ComboBoxItem Content="Centralized (Docker)" Tag="Centralized" />
+                                    <ComboBoxItem Content="Local + Centralized" Tag="Both" />
+                                </ComboBox>
+                            </StackPanel>
 
-                        <StackPanel Grid.Row="4" Margin="0,0,0,10">
-                            <TextBlock Text="{Binding SettingsBlockingAppsText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding BusinessSoftwareInput, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                            <!-- URL du centraliseur -->
+                            <StackPanel Grid.Row="4" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsLogCentralizerUrlText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding LogCentralizerUrl, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
 
-                        <StackPanel Grid.Row="5" Margin="0,0,0,12">
-                            <TextBlock Text="{Binding SettingsEncryptionKeyText}" Foreground="#2A3C5A" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding EncryptionKeyInput, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                            <!-- Extensions à chiffrer -->
+                            <StackPanel Grid.Row="5" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsExtensionsText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding EncryptedExtensionsInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
 
-                        <Button Grid.Row="6"
+                            <!-- Logiciels Métier -->
+                            <StackPanel Grid.Row="6" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsBlockingAppsText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding BusinessSoftwareInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
+
+                            <!-- Extensions Prioritaires -->
+                            <StackPanel Grid.Row="7" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsPriorityText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding PriorityExtensionsInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
+
+                            <!-- Taille Max Fichier (Ko) -->
+                            <StackPanel Grid.Row="8" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SettingsMaxFileSizeText}" Foreground="#2A3C5A" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding MaxFileSizeInput, UpdateSourceTrigger=PropertyChanged}" Height="28" VerticalContentAlignment="Center" Padding="5,0"/>
+                            </StackPanel>
+
+                            <!-- Bouton Sauvegarder -->
+                            <Button Grid.Row="10"
                                 Content="{Binding SaveText}"
                                 Command="{Binding SaveSettingsCommand}"
-                                Width="32"
-                                Height="22"
-                                Padding="0"
+                                MinWidth="120"
+                                Height="35"
+                                FontSize="14"
+                                FontWeight="Bold"
                                 HorizontalAlignment="Right"
                                 Background="#2D6CDF"
                                 Foreground="White"
-                                BorderBrush="#2D6CDF"
-                                HorizontalContentAlignment="Center"
-                                VerticalContentAlignment="Center" />
-                    </Grid>
-                </Border>
+                                BorderThickness="0"
+                                Cursor="Hand">
+                                <!-- Petit effet de style pour le bouton -->
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="4"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </Grid>

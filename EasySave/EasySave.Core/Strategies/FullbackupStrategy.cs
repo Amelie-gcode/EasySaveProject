@@ -12,37 +12,68 @@ namespace EasySave.Strategies
     /// Does not check if files already exist or are unchanged.
     public class FullBackupStrategy : IBackupStrategy
     {
-        public void ExecuteBackup(string sourceDir, string targetDir, BackupJob jobContext)
+        public async Task ExecuteBackupAsync(string sourceDir, string targetDir, BackupJob jobContext)
         {
-            // Retrieve all files in the source directory, including subdirectories
-            string[] files = Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories);
+            // Offload file discovery to a background task
+            string[] files = await Task.Run(() => Directory.GetFiles(sourceDir, "*.*", SearchOption.AllDirectories));
 
             foreach (string sourceFile in files)
             {
-                // ✅ CHECK #2 — before each file, stop if business software just opened
-                if (jobContext.Settings != null &&
-                    jobContext.BusinessService.IsBusinessSoftwareRunning(
-                        jobContext.Settings.BusinessSoftwareName))
+                string extension = Path.GetExtension(sourceFile);
+                bool isPriority = jobContext.Settings.PriorityExtensions.Contains(extension);
+
+                // If this specific file is NOT a priority, check if others are waiting globally
+                if (!isPriority)
                 {
-                    string detected = jobContext.BusinessService.GetDetectedSoftwareName(
-                        jobContext.Settings.BusinessSoftwareName);
+                    // We wait while ANY job in the manager has priority files pending
+                    bool waited = false;
+                    // Check the GLOBAL status across all jobs
+                    while (BackupJob.OthersHavePriority(jobContext.LocalPriorityFilesCount))
+                    {
+                        waited = true;
+                        jobContext.State = JobState.Paused; // Visual feedback: "I'm waiting"
+                        jobContext.NotifyProgress();
 
-                    jobContext.State = JobState.Error;
-                    jobContext.CurrentSourceFile = $"BLOCKED by: {detected}";
+                        jobContext.CheckPauseAndCancellation();
+                        await Task.Delay(1000);
+                    }
 
+                    // CRITICAL FIX: If we were waiting, set state back to Active 
+                    // so the copy logic can proceed.
+                    if (waited)
+                    {
+                        jobContext.State = JobState.Active;
+                        jobContext.NotifyProgress();
+                    }
+                }
+                // Requirement: "Temporary pause if business software is detected"
+                // We use a loop to wait while the business software is open
+                bool wasWaitingForBusinessSoftware = false;
+                while (jobContext.Settings != null && jobContext.BusinessService.IsBusinessSoftwareRunning(jobContext.Settings.BusinessSoftwareName))
+                {
+                    wasWaitingForBusinessSoftware = true;
+                    jobContext.State = JobState.Paused; // Visual feedback for user
+                    jobContext.NotifyProgress();
                     EasyLogger.Instance.WriteLog(new LogEntry
                     {
                         Timestamp = DateTime.Now,
                         BackupName = jobContext.Name,
-                        SourceFilePath = $"BLOCKED by: {detected}",
+                        SourceFilePath = $"BLOCKED by: {jobContext.BusinessService.GetDetectedSoftwareName(
+                        jobContext.Settings.BusinessSoftwareName)}",
                         TargetFilePath = string.Empty,
                         FileSize = 0,
                         TransferTimeMs = -1
                     });
-
-                    jobContext.NotifyProgress();
-                    return; // previous file already fully copied, next ones are skipped
+                    await Task.Delay(1000); // Poll every second
                 }
+
+                // CRITICAL FIX: Restore state to Active after business software is closed
+                if (wasWaitingForBusinessSoftware)
+                {
+                    jobContext.State = JobState.Active;
+                    jobContext.NotifyProgress();
+                }
+
                 jobContext.CheckPauseAndCancellation();
 
                 // 1. Prepare paths
@@ -53,31 +84,68 @@ namespace EasySave.Strategies
                 long fileSize = new FileInfo(sourceFile).Length;
                 Stopwatch stopwatch = Stopwatch.StartNew();
                 long encryptionTime = 0;
+                bool requiresEncryption = jobContext.Encryption.ShouldEncrypt(sourceFile);
+
+
+                //check file size against threshold for parallelism
+                long fileSizeInBytes = new FileInfo(sourceFile).Length;
+                long thresholdInBytes = jobContext.Settings.MaxParallelSize * 1024;
+
+                bool isLargeFile = fileSizeInBytes > thresholdInBytes;
+                bool semaphoreAcquired = false;
+
 
                 try
                 {
+                    if (isLargeFile)
+                    {
+                        // If it's a large file, wait here until the semaphore is free.
+                        // Small files in other jobs will NOT be blocked by this.
+                        await BackupJob.LargeFileSemaphore.WaitAsync();
+                        semaphoreAcquired = true;
+                    }
                     // 2. Update Context for "Active" display
                     jobContext.CurrentSourceFile = sourceFile;
                     jobContext.CurrentTargetFile = targetFile;
 
-                    // Notify state that we are starting this specific file
-                    jobContext.NotifyProgress();
-                    if (jobContext.Encryption.ShouldEncrypt(sourceFile))
+                    // Notify state that we are starting this specific file (force immediate)
+                    jobContext.NotifyProgress(force: true);
+
+                    // Small delay so external viewers can observe the live update (for demo/visibility)
+                    await Task.Delay(200);
+
+
+                    if (requiresEncryption)
                     {
-                        CopyFileWithControl(sourceFile, targetFile, jobContext);
-                        encryptionTime = jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey);
+                        await CopyFileAsync(sourceFile, targetFile, jobContext);
+                        // Encryption is usually an external process call (CryptoSoft)
+                        encryptionTime = await Task.Run(() => jobContext.Encryption.Encrypt(targetFile, jobContext.EncryptionKey));
+
+                        if (encryptionTime < 0)
+                        {
+                            if (File.Exists(targetFile))
+                            {
+                                File.Delete(targetFile);
+                            }
+                            string details = string.IsNullOrWhiteSpace(jobContext.Encryption.LastError)
+                                ? "Unknown CryptoSoft startup error."
+                                : jobContext.Encryption.LastError;
+                            throw new InvalidOperationException($"Encryption failed for target file. {details}");
+                        }
                     }
                     else
                     {
-                        CopyFileWithControl(sourceFile, targetFile, jobContext);
+                        await CopyFileAsync(sourceFile, targetFile, jobContext);
 
-                    
+
                     }
                     stopwatch.Stop();
 
                     // 3. Update Progress Counters immediately after success
                     jobContext.FilesRemaining--;
                     // SizeRemaining is updated during the copy to keep progress smooth.
+                    // After finishing this file, ensure final progress is pushed
+                    jobContext.NotifyProgress(force: true);
                 }
                 catch (OperationCanceledException)
                 {
@@ -100,36 +168,43 @@ namespace EasySave.Strategies
                         EncryptionTimeMs = encryptionTime
 
                     });
-
+                    
                     // Final notification for this file iteration
                     jobContext.NotifyProgress();
+                    if (isPriority)
+                    {
+                        BackupJob.DecrementGlobalPriority();
+                        jobContext.LocalPriorityFilesCount--; // Important to decrement both!
+                    }
+                    if (semaphoreAcquired)
+                    {
+                        // CRITICAL: Release the lock so the next large file can start
+                        BackupJob.LargeFileSemaphore.Release();
+                    }
                 }
             }
                 
         }
 
-        private static void CopyFileWithControl(string sourceFile, string targetFile, BackupJob jobContext)
+        private async Task CopyFileAsync(string sourceFile, string targetFile, BackupJob jobContext)
         {
             const int BufferSize = 1024 * 1024; // 1MB
-
             using var source = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var target = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.None);
 
             byte[] buffer = new byte[BufferSize];
             int read;
 
-            var notify = Stopwatch.StartNew();
-            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            while ((read = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
             {
+                // This allows the "Stop" button to work even mid-file
                 jobContext.CheckPauseAndCancellation();
-                target.Write(buffer, 0, read);
+
+                await target.WriteAsync(buffer, 0, read);
                 jobContext.SizeRemaining -= read;
 
-                if (notify.ElapsedMilliseconds >= 100)
-                {
-                    jobContext.NotifyProgress();
-                    notify.Restart();
-                }
+                // Optional: Throttle NotifyProgress to avoid UI flickering
+                // jobContext.NotifyProgress(); 
             }
         }
     }

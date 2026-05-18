@@ -12,7 +12,7 @@ namespace EasySave.Models
         private readonly StateManager _stateManager;
         private readonly IConfigManager _configManager;
         private readonly SettingsManager _settingsManager;
-        private readonly EncryptionService _encryptionService;
+        private EncryptionService _encryptionService;
 
         public BackupManager(IConfigManager configManager = null)
         {
@@ -25,13 +25,13 @@ namespace EasySave.Models
 
             _settingsManager = new SettingsManager();
 
+            var initialSettings = _settingsManager.LoadSettings();
             _encryptionService = new EncryptionService(
-                _settingsManager.LoadSettings().CryptoSoftPath,
-                _settingsManager.LoadSettings().EncryptedExtensions.ToArray());
+                initialSettings.CryptoSoftPath,
+                initialSettings.EncryptedExtensions.ToArray());
             // Load saved jobs on startup
             LoadFromConfig();
         }
-
         private void LoadFromConfig()
         {
             var savedJobs = _configManager.LoadJobs();
@@ -48,7 +48,7 @@ namespace EasySave.Models
         /// Orchestrates the execution of a specific job by its ID.
         /// </summary>
         /// <param name="id">The index of the job (1-5).</param>
-        public void ExecuteJob(int id)
+        public async Task ExecuteJob(int id)
         {
             
             // IDs are 1-based for the user, but 0-based for the list index
@@ -65,6 +65,9 @@ namespace EasySave.Models
             
             // 1. Refresh settings (in case the user changed the key or extensions recently)
             var settings = _settingsManager.LoadSettings();
+            _encryptionService = new EncryptionService(
+                settings.CryptoSoftPath,
+                settings.EncryptedExtensions.ToArray());
 
             // 2. "Inject" the dependencies into the Job
             // We pass the ALREADY DECRYPTED key (handled by LoadSettings)
@@ -85,7 +88,7 @@ namespace EasySave.Models
                 job.ProgressUpdated += _stateManager.OnJobProgressUpdated;
 
                 // Execute the business logic (which uses the Strategy pattern internally)
-                job.Execute();
+                await job.Execute();
             }
             finally
             {
@@ -96,16 +99,23 @@ namespace EasySave.Models
         }
 
         /// <summary>
-        /// Executes all configured backup jobs one after another.
+        /// Executes all configured backup jobs on parrallele.
         /// </summary>
-        public void ExecuteAll()
+        public async Task ExecuteAll()
         {
+            // Create a list of Tasks to represent all running jobs
+            List<Task> runningTasks = new List<Task>();
+
             for (int i = 1; i <= _jobs.Count; i++)
             {
-                ExecuteJob(i);
+                // We call ExecuteJob but do NOT 'await' it inside the loop.
+                // This launches all jobs simultaneously.
+                runningTasks.Add(ExecuteJob(i));
             }
-        }
 
+            // Wait for all backup jobs to finish in parallel
+            await Task.WhenAll(runningTasks);
+        }
         /// <summary>
         /// Creates and adds a new backup job to the list.
         /// </summary>

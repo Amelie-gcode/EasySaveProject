@@ -62,14 +62,28 @@
   "GuiJobName": "اسم المهمة",
   "GuiSettingsLanguage": "اللغة",
   "GuiSettingsLogFormat": "تنسيق السجلات",
+  "GuiSettingsLogDestination": "وجهة السجلات",
+  "GuiSettingsLogCentralizerUrl": "رابط مركز التجميع (Docker)",
+  "MenuChangeSettingsOption5": "5. تغيير وجهة السجلات (محلي / مركزي / كلاهما)",
+  "MenuChangeSettingsOption6": "6. تغيير رابط مركز التجميع",
+  "PromptLogDestination": "اختر الوجهة [Local/Centralized/Both]: ",
+  "PromptLogCentralizerUrl": "أدخل رابط مركز التجميع (مثال: http://localhost:5080): ",
+  "MsgLogDestinationChanged": "تم تحديث وجهة السجلات.",
+  "MsgLogCentralizerUrlChanged": "تم تحديث رابط مركز التجميع.",
   "GuiSettingsExtensions": "الامتدادات المطلوب تشفيرها (مثال: .txt, .pdf)",
   "GuiSettingsBlockingApps": "برامج الإيقاف (مثال: notepad.exe, game.exe)",
+  "GuiSettingsCryptoSoftPath": "مسار ملف CryptoSoft التنفيذي",
+  "GuiCryptoSoftNotFound": "لم يتم العثور على CryptoSoft.exe في المسار المتوقع. يرجى تحديده يدوياً.",
+
   "GuiSettingsEncryptionKey": "مفتاح التشفير",
   "StateInactive": "غير نشط",
   "StateActive": "نشط",
   "StatePaused": "متوقف مؤقتاً",
   "StateCompleted": "مكتمل",
   "StateCancelled": "ملغي",
-  "StateError": "خطأ"
+  "StateError": "خطأ",
+  "GuiSettingsPriority": "أولوية مهمة النسخ",
+  "GuiSettingsMaxSize": "الحد الأقصى لحجم النسخة (GB)"
+
 }
 

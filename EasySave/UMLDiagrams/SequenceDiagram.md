@@ -1,108 +1,60 @@
+# Sequence Diagram - Backup Execution (Mermaid)
+
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Utilisateur
-    participant Console as View
-    participant VM as MainViewModel
+    participant User
+    participant UI
+    participant MainVM as MainViewModel
     participant BM as BackupManager
-    participant Settings as SettingsManager
     participant Job as BackupJob
     participant Strat as IBackupStrategy
-    participant BizSoft as BusinessSoftwareService
+    participant FS as FileSystem
     participant Encrypt as EncryptionService
-    participant StateM as StateManager
-    participant Logger as EasyLogger
-    participant LogWriter as ILogWriter
+    participant State as StateManager
+    participant Log as EasyLogger
 
-    Note over Console,LogWriter: INITIALISATION
-    Console->>VM: new MainViewModel()
-    VM->>BM: new BackupManager()
-    VM->>Settings: LoadSettings()
-    BM->>StateM: new StateManager()
+    User->>UI: Click Execute
+    UI->>MainVM: ExecuteSelectedJobCommand()
+    MainVM->>BM: ExecuteJob(id)
+    BM->>BM: Load Settings
+    BM->>Job: inject EncryptionService, Settings
+    BM->>Job: subscribe ProgressUpdated -> State.OnJobProgressUpdated
+    BM->>Job: await Execute()
 
-    Note over Console,LogWriter: UTILISATEUR SÉLECTIONNE UN JOB
-    User->>Console: Saisir ID du job
-    Console->>VM: ExecuteJobCommand(jobId)
-
-    Note over Console,LogWriter: CONFIGURATION PRE-BACKUP
-    VM->>BM: ExecuteJob(jobId)
-    BM->>Job: Récupère le job
-    BM->>Settings: LoadSettings()
-    Settings-->>BM: AppSettings
-
-    BM->>Job: Injection dépendances
-    Job->>Job: Encryption, Settings, BusinessService
-    BM->>Job: ProgressUpdated += StateManager.OnJobProgressUpdated
-
-    Job->>BizSoft: IsBusinessSoftwareRunning(names)
-    alt Business Software Détecté
-        BizSoft-->>Job: true
-        Job->>Job: State = Cancelled
-        Job->>Logger: WriteLog("BLOCKED", -1)
-        Note right of Job: ❌ ABORT
-    else Business Software Absent
-        BizSoft-->>Job: false
-    end
-
-    Note over Console,LogWriter: VALIDATION CHEMINS
-    Job->>Job: Directory.Exists(SourcePath)?
-    Job->>Job: Directory.Exists(TargetPath)?
-
-    Note over Console,LogWriter: CALCUL STATS
-    Job->>Job: CalculateInitialStats()
-    Job->>Job: TotalFiles, TotalSize
-    Job->>StateM: NotifyProgress()
-
-    Note over Console,LogWriter: EXÉCUTION STRATÉGIE
-    Job->>Strat: ExecuteBackup(sourceDir, targetDir, jobContext)
-
-    loop Pour chaque fichier
-        Strat->>Strat: CheckPauseAndCancellation()
-        Strat->>BizSoft: IsBusinessSoftwareRunning() [Check #2]
-        alt Business Software Détecté
-            Strat->>Logger: WriteLog("BLOCKED", -1)
-            Strat->>Strat: return
+    Note over Job: Start Execution
+    Job->>Job: Check BusinessSoftwareRunning()
+    
+    alt is blocked
+        Job->>Log: WriteLog(blocked)
+        Job->>State: NotifyProgress()
+        Job-->>BM: return (cancelled)
+    else proceed
+        Job->>State: NotifyProgress() (Active)
+        Job->>Job: CalculateInitialStats()
+        Job->>Strat: ExecuteBackupAsync(source,target,job)
+        
+        loop Pour chaque fichier
+            Strat->>FS: Get file path
+            Strat->>Job: CheckPauseAndCancellation()
+            Strat->>Job: set CurrentSource/Target : NotifyProgress()
+            Strat->>FS: CopyFileAsync(stream)
+            FS-->>Strat: bytes read/written
+            Strat->>Job: update SizeRemaining : NotifyProgress(throttled)
+            
+            alt requires encryption
+                Strat->>Encrypt: Encrypt(target, key)
+                Encrypt-->>Strat: exitCode
+                alt encryption failed
+                    Strat->>FS: Delete target
+                    Strat->>Log: WriteLog(error)
+                    Strat->>Job: State = Error : NotifyProgress()
+                    %% Sortie de la boucle car erreur critique
+                end
+            end
+            Strat->>Job: FilesRemaining-- : NotifyProgress(force)
         end
-
-        Strat->>Strat: Copie fichier (Full ou Differential)
-
-        alt Chiffrement Activé
-            Strat->>Encrypt: ShouldEncrypt(filePath)?
-            Strat->>Strat: CopyFileWithControl()
-            Strat->>Encrypt: Encrypt(targetFile, key)
-        else Pas de chiffrement
-            Strat->>Strat: CopyFileWithControl()
-        end
-
-        Strat->>Job: FilesRemaining--
-        Strat->>Job: SizeRemaining -= bytesRead
-        Strat->>Job: NotifyProgress()
-
-        par StateManager écrit
-            Job->>StateM: OnJobProgressUpdated()
-            StateM->>StateM: Crée JobStateData
-            StateM->>StateM: _history.Add(snapshot)
-            StateM->>StateM: Écrit state.json
-        and Logger écrit
-            Job->>Logger: WriteLog(entry)
-            Logger->>LogWriter: Write(entry, logDirectory)
-            LogWriter->>LogWriter: Sérialise JSON/XML
-        end
+        
+        Job->>Job: State = Completed : NotifyProgress(force)
+        Job-->>BM: return
     end
-
-    Note over Console,LogWriter: FINALISATION
-    alt Succès
-        Job->>Job: State = Completed
-    else Erreur
-        Job->>Job: State = Error
-    else Annulation
-        Job->>Job: State = Cancelled
-    end
-
-    Job->>StateM: NotifyProgress() [Final]
-    Job-->>BM: Fin
-    BM->>Job: Détacher observer
-    BM-->>VM: Retour
-    VM-->>Console: Exécution terminée
-    Console-->>User: Affiche résultat
 ```

@@ -62,14 +62,27 @@
   "GuiJobName": "Nombre del trabajo",
   "GuiSettingsLanguage": "Idioma",
   "GuiSettingsLogFormat": "Formato de logs",
+  "GuiSettingsLogDestination": "Destino de logs",
+  "GuiSettingsLogCentralizerUrl": "URL del centralizador (Docker)",
+  "MenuChangeSettingsOption5": "5. Cambiar destino de logs (Local / Centralizado / Ambos)",
+  "MenuChangeSettingsOption6": "6. Cambiar URL del centralizador",
+  "PromptLogDestination": "Seleccione destino [Local/Centralized/Both]: ",
+  "PromptLogCentralizerUrl": "URL del centralizador (ej. http://localhost:5080): ",
+  "MsgLogDestinationChanged": "Destino de logs actualizado.",
+  "MsgLogCentralizerUrlChanged": "URL del centralizador actualizada.",
   "GuiSettingsExtensions": "Extensiones a cifrar (ej: .txt, .pdf)",
   "GuiSettingsBlockingApps": "Software bloqueante (ej: notepad.exe, game.exe)",
+
+  "GuiSettingsCryptoSoftPath": "Ruta del ejecutable CryptoSoft",
+  "GuiCryptoSoftNotFound": "No se encontró CryptoSoft.exe en la ubicación esperada. Selecciónelo manualmente.",
   "GuiSettingsEncryptionKey": "Clave de cifrado",
   "StateInactive": "Inactivo",
   "StateActive": "Activo",
   "StatePaused": "Pausado",
   "StateCompleted": "Completado",
   "StateCancelled": "Cancelado",
-  "StateError": "Error"
+  "StateError": "Error",
+  "GuiSettingsPriority": "Prioridad de ejecución",
+  "GuiSettingsMaxSize": "Tamaño máximo de los archivos a copiar (MB)"
 }
 

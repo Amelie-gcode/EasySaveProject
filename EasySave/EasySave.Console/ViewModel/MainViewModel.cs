@@ -30,6 +30,7 @@ namespace EasySave.ViewModel
          
             //First Save to ensure the file exists for future updates (e.g., language changes)
             _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
             // Apply the saved language choice immediately
             LocalizationManager.Instance.SetLanguage(_currentSettings.Language);
             _backupManager = new BackupManager();
@@ -116,16 +117,21 @@ namespace EasySave.ViewModel
         {
             _currentSettings.LogFormat = format.ToUpper();
             _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
+        }
 
-            // 2. Update the Logger instance in real-time
-            if (format.ToLower() == "xml")
-            {
-                EasyLogger.Instance.SetLogFormat(new XmlLogWriter());
-            }
-            else
-            {
-                EasyLogger.Instance.SetLogFormat(new JsonLogWriter());
-            }
+        public void ChangeLogDestinationCommand(string destination)
+        {
+            _currentSettings.LogDestination = destination;
+            _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
+        }
+
+        public void ChangeLogCentralizerUrlCommand(string url)
+        {
+            _currentSettings.LogCentralizerUrl = url;
+            _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
         }
 
         // ==========================================

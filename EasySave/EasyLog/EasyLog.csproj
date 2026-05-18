@@ -42,8 +42,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EasyLogger.cs" />
+    <Compile Include="HttpCentralizedLogWriter.cs" />
     <Compile Include="ILogWriter.cs" />
     <Compile Include="JsonLogWriter.cs" />
+    <Compile Include="LogConfiguration.cs" />
+    <Compile Include="LogDestinationMode.cs" />
     <Compile Include="LogEntry.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="XMLLogWriter.cs" />

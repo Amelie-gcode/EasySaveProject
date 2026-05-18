@@ -41,6 +41,14 @@
   "MenuChangeSettingsOption2": "2. Change Log Format (JSON, XML)",
   "MenuChangeSettingsOption3": "3. Change .extension file encryption",
   "MenuChangeSettingsOption4": "4. Change Key Encryption",
+  "MenuChangeSettingsOption5": "5. Change Log Destination (Local / Centralized / Both)",
+  "MenuChangeSettingsOption6": "6. Change Log Centralizer URL",
+  "PromptLogDestination": "Select log destination [Local/Centralized/Both]: ",
+  "PromptLogCentralizerUrl": "Enter log centralizer URL (e.g. http://localhost:5080): ",
+  "MsgLogDestinationChanged": "Log destination successfully updated.",
+  "MsgLogCentralizerUrlChanged": "Log centralizer URL successfully updated.",
+  "GuiSettingsLogDestination": "Log destination",
+  "GuiSettingsLogCentralizerUrl": "Log centralizer URL (Docker)",
   "PromptSelectSettingToChange": "Select the setting you want to change: ",
   "MsgFeatureNotImplemented": "This feature is not implemented yet. Please check for updates in the future.",
   "ErrorInvalidSettingOption": "Invalid option selected. Please try again.",
@@ -65,12 +73,16 @@
   "GuiSettingsLogFormat": "Logs format",
   "GuiSettingsExtensions": "Extensions to encrypt (ex: .txt, .pdf)",
   "GuiSettingsBlockingApps": "Blocking software (ex: notepad.exe, game.exe)",
+  "GuiSettingsCryptoSoftPath": "CryptoSoft executable path",
+  "GuiCryptoSoftNotFound": "CryptoSoft.exe not found in the expected location. Please browse and select it.",
   "GuiSettingsEncryptionKey": "Encryption key",
   "StateInactive": "Inactive",
   "StateActive": "Active",
   "StatePaused": "Paused",
   "StateCompleted": "Completed",
   "StateCancelled": "Cancelled",
-  "StateError": "Error"
+  "StateError": "Error",
+  "GuiSettingsPriority": "Backup job priority",
+  "GuiSettingsMaxSize": "Maximum backup size (GB)"
 
 }

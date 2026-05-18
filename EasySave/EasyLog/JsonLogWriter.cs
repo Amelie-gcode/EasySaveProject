@@ -31,6 +31,8 @@ namespace EasyLog
         {
             return $@"  {{
     ""timestamp"": ""{EscapeJson(entry.Timestamp.ToString("o"))}"",
+    ""machineName"": ""{EscapeJson(entry.MachineName)}"",
+    ""userName"": ""{EscapeJson(entry.UserName)}"",
     ""backupName"": ""{EscapeJson(entry.BackupName)}"",
     ""sourceFilePath"": ""{EscapeJson(entry.SourceFilePath)}"",
     ""targetFilePath"": ""{EscapeJson(entry.TargetFilePath)}"",

@@ -1,14 +1,15 @@
-﻿using System.Configuration;
-using System.Data;
+﻿using EasySave.Models;
 using System.Windows;
 
 namespace EasySave.WPF
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : System.Windows.Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            var settings = new SettingsManager().LoadSettings();
+            LogBootstrapper.Apply(settings);
+            base.OnStartup(e);
+        }
     }
-
 }

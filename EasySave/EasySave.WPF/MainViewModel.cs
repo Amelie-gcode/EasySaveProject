@@ -1,8 +1,11 @@
 ﻿using EasySave.Models;
 using EasySave.Strategies;
+using EasyLog;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,9 +29,12 @@ namespace EasySave.WPF
         private bool _isDifferential;
         private string _selectedLanguage = "EN";
         private string _selectedLogFormat = "JSON";
+        private string _selectedLogDestination = "Local";
+        private string _logCentralizerUrl = "http://localhost:5080";
         private string _encryptedExtensionsInput = string.Empty;
         private string _businessSoftwareInput = string.Empty;
-        private string _encryptionKeyInput = string.Empty;
+        private string _priorityExtensionsInput = string.Empty;
+        private string _maxFileSizeInput = "0"; // Stocké en string pour le TextBox
         private bool _isModifyPanelOpen;
 
         public ObservableCollection<JobViewModel> Jobs { get; } = new ObservableCollection<JobViewModel>();
@@ -84,6 +90,44 @@ namespace EasySave.WPF
             }
         }
 
+        public string SelectedLogDestination
+        {
+            get => _selectedLogDestination;
+            set
+            {
+                var normalized = NormalizeLogDestination(value);
+                if (_selectedLogDestination == normalized) return;
+                _selectedLogDestination = normalized;
+                OnPropertyChanged();
+            }
+        }
+
+        private static string NormalizeLogDestination(string? value)
+        {
+            switch ((value ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "CENTRALIZED":
+                case "CENTRAL":
+                    return "Centralized";
+                case "BOTH":
+                    return "Both";
+                default:
+                    return "Local";
+            }
+        }
+
+        public string LogCentralizerUrl
+        {
+            get => _logCentralizerUrl;
+            set
+            {
+                var normalized = (value ?? string.Empty).Trim();
+                if (_logCentralizerUrl == normalized) return;
+                _logCentralizerUrl = normalized;
+                OnPropertyChanged();
+            }
+        }
+
         public string EncryptedExtensionsInput
         {
             get => _encryptedExtensionsInput;
@@ -105,14 +149,24 @@ namespace EasySave.WPF
                 OnPropertyChanged();
             }
         }
-
-        public string EncryptionKeyInput
+        public string PriorityExtensionsInput
         {
-            get => _encryptionKeyInput;
+            get => _priorityExtensionsInput;
             set
             {
-                if (_encryptionKeyInput == value) return;
-                _encryptionKeyInput = value;
+                if (_priorityExtensionsInput == value) return;
+                _priorityExtensionsInput = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string MaxFileSizeInput
+        {
+            get => _maxFileSizeInput;
+            set
+            {
+                if (_maxFileSizeInput == value) return;
+                _maxFileSizeInput = value;
                 OnPropertyChanged();
             }
         }
@@ -146,9 +200,14 @@ namespace EasySave.WPF
         public string TargetHeaderText => LocalizationManager.Instance.GetString("LabelTarget");
         public string SettingsLanguageText => LocalizationManager.Instance.GetString("GuiSettingsLanguage");
         public string SettingsLogFormatText => LocalizationManager.Instance.GetString("GuiSettingsLogFormat");
+        public string SettingsLogDestinationText => LocalizationManager.Instance.GetString("GuiSettingsLogDestination");
+        public string SettingsLogCentralizerUrlText => LocalizationManager.Instance.GetString("GuiSettingsLogCentralizerUrl");
         public string SettingsExtensionsText => LocalizationManager.Instance.GetString("GuiSettingsExtensions");
         public string SettingsBlockingAppsText => LocalizationManager.Instance.GetString("GuiSettingsBlockingApps");
-        public string SettingsEncryptionKeyText => LocalizationManager.Instance.GetString("GuiSettingsEncryptionKey");
+        public string SettingsPriorityText => LocalizationManager.Instance.GetString("GuiSettingsPriority");
+        public string SettingsMaxFileSizeText => LocalizationManager.Instance.GetString("GuiSettingsMaxSize");
+
+        // N'oublie pas d'ajouter les OnPropertyChanged correspondants dans ApplyLanguage()
 
         public string LabelNameText => LocalizationManager.Instance.GetString("LabelName");
         public string LabelSourceText => LocalizationManager.Instance.GetString("LabelSource");
@@ -247,11 +306,23 @@ namespace EasySave.WPF
             LocalizationManager.Instance.SetLanguage(_currentSettings.Language);
             _selectedLanguage = LocalizationManager.Instance.CurrentLanguage;
             _selectedLogFormat = string.IsNullOrWhiteSpace(_currentSettings.LogFormat) ? "JSON" : _currentSettings.LogFormat.ToUpperInvariant();
+            _selectedLogDestination = string.IsNullOrWhiteSpace(_currentSettings.LogDestination)
+                ? "Local"
+                : LogBootstrapper.ToSettingValue(LogBootstrapper.ParseDestination(_currentSettings.LogDestination));
+            _logCentralizerUrl = string.IsNullOrWhiteSpace(_currentSettings.LogCentralizerUrl)
+                ? "http://localhost:5080"
+                : _currentSettings.LogCentralizerUrl;
             _encryptedExtensionsInput = string.Join(", ", _currentSettings.EncryptedExtensions ?? new System.Collections.Generic.List<string>());
             _businessSoftwareInput = string.Join(", ", _currentSettings.BusinessSoftwareName ?? new System.Collections.Generic.List<string>());
-            _encryptionKeyInput = _currentSettings.EncryptionKey ?? string.Empty;
-
+            _priorityExtensionsInput = string.Join(", ", _currentSettings.PriorityExtensions ?? new List<string>());
+            _maxFileSizeInput = _currentSettings.MaxParallelSize.ToString();
             _backupManager = new BackupManager();
+
+            // Apply saved log format to the global logger
+            if (_selectedLogFormat == "XML")
+                EasyLogger.Instance.SetLogFormat(new XmlLogWriter());
+            else
+                EasyLogger.Instance.SetLogFormat(new JsonLogWriter());
 
             LoadJobs();
 
@@ -387,13 +458,16 @@ namespace EasySave.WPF
             OnPropertyChanged(nameof(TargetHeaderText));
             OnPropertyChanged(nameof(SettingsLanguageText));
             OnPropertyChanged(nameof(SettingsLogFormatText));
+            OnPropertyChanged(nameof(SettingsLogDestinationText));
+            OnPropertyChanged(nameof(SettingsLogCentralizerUrlText));
             OnPropertyChanged(nameof(SettingsExtensionsText));
             OnPropertyChanged(nameof(SettingsBlockingAppsText));
-            OnPropertyChanged(nameof(SettingsEncryptionKeyText));
             OnPropertyChanged(nameof(LabelNameText));
             OnPropertyChanged(nameof(LabelSourceText));
             OnPropertyChanged(nameof(LabelTargetText));
             OnPropertyChanged(nameof(LabelStateText));
+            OnPropertyChanged(nameof(SettingsPriorityText));    // for label "Extensions Prioritaires"
+            OnPropertyChanged(nameof(SettingsMaxFileSizeText)); // for label "Taille Max Fichier"
 
             foreach (var job in Jobs)
             {
@@ -512,10 +586,20 @@ namespace EasySave.WPF
         {
             _currentSettings.Language = SelectedLanguage;
             _currentSettings.LogFormat = SelectedLogFormat;
-            _currentSettings.EncryptionKey = string.IsNullOrWhiteSpace(EncryptionKeyInput) ? "default" : EncryptionKeyInput.Trim();
+            _currentSettings.LogDestination = SelectedLogDestination;
+            _currentSettings.LogCentralizerUrl = LogCentralizerUrl;
             _currentSettings.EncryptedExtensions = ParseCsvList(EncryptedExtensionsInput, ensureDotPrefix: true);
             _currentSettings.BusinessSoftwareName = ParseCsvList(BusinessSoftwareInput, ensureDotPrefix: false);
+            
+            _currentSettings.PriorityExtensions = ParseCsvList(PriorityExtensionsInput, ensureDotPrefix: true);
+
+            if (long.TryParse(MaxFileSizeInput, out long maxSize))
+            {
+                _currentSettings.MaxParallelSize = maxSize;
+            }
+           
             _settingsManager.SaveSettings(_currentSettings);
+            LogBootstrapper.Apply(_currentSettings);
             ApplyLanguage(SelectedLanguage);
         }
 
@@ -551,35 +635,46 @@ namespace EasySave.WPF
             try
             {
                 IsBusy = true;
-                await Task.Run(() => _backupManager.ExecuteAll());
+                // Call the refactored async version of ExecuteAll
+                await _backupManager.ExecuteAll();
+            }
+            catch (Exception ex)
+            {
+                // Handle or Log exceptions (e.g., showing a dialog to the user)
+                Debug.WriteLine($"Parallel Execution Error: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
-                _dispatcher.Invoke(LoadJobs);
+                // No need to Invoke if you're already on the UI thread (which async methods usually are)
+                LoadJobs();
             }
         }
 
         private async Task ExecuteCheckedJobsAsync()
         {
-            var checkedJobs = Jobs.Where(j => j.IsChecked).Select(j => j.Id).ToArray();
-            if (checkedJobs.Length == 0) return;
+            var checkedIds = Jobs.Where(j => j.IsChecked).Select(j => j.Id).ToList();
+            if (checkedIds.Count == 0) return;
 
             try
             {
                 IsBusy = true;
-                await Task.Run(() =>
-                {
-                    foreach (var id in checkedJobs)
-                    {
-                        _backupManager.ExecuteJob(id);
-                    }
-                });
+
+                // Create a list of tasks for all checked jobs
+                // This launches all of them simultaneously
+                var backupTasks = checkedIds.Select(id => _backupManager.ExecuteJob(id)).ToList();
+
+                // Wait for all selected jobs to complete in parallel
+                await Task.WhenAll(backupTasks);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Execution Error: {ex.Message}");
             }
             finally
             {
                 IsBusy = false;
-                _dispatcher.Invoke(LoadJobs);
+                LoadJobs();
             }
         }
 
@@ -603,6 +698,12 @@ namespace EasySave.WPF
             public string SourcePath => _job.SourcePath;
 
             public string TargetPath => _job.TargetPath;
+
+            public string LastUpdate => _job.LastUpdate;
+
+            public int FilesRemaining => _job.FilesRemaining;
+
+            public long SizeRemaining => _job.SizeRemaining;
 
             public JobState State => _job.State;
 
@@ -698,6 +799,9 @@ namespace EasySave.WPF
                     OnPropertyChanged(nameof(TargetPath));
                     OnPropertyChanged(nameof(IsDifferential));
                     OnPropertyChanged(nameof(ProgressPercent));
+                    OnPropertyChanged(nameof(LastUpdate));
+                    OnPropertyChanged(nameof(FilesRemaining));
+                    OnPropertyChanged(nameof(SizeRemaining));
 
                     (PauseResumeCommand as RelayCommand)?.RaiseCanExecuteChanged();
                     (CancelCommand as RelayCommand)?.RaiseCanExecuteChanged();
