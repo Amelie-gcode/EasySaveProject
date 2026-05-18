@@ -11,25 +11,25 @@ flowchart TD
   D[State = Active; NotifyProgress]
   E{Are Source/Target valid?}
   E_no[HandlePathError -> State=Error; NotifyProgress -> End]
-  E_yes[CalculateInitialStats (TotalFiles/TotalSize ...)]
+  E_yes[CalculateInitialStats]
   LoopStart[For each source file]
   P1{Is file priority?}
-  WaitPriority[Wait until OthersHavePriority == false (Pause, NotifyProgress)]
+  WaitPriority[Wait until OthersHavePriority == false]
   P2{Is business software detected?}
-  WaitBusiness[Wait until closed (Pause, NotifyProgress)]
+  WaitBusiness[Wait until closed]
   CheckCancel[CheckPauseAndCancellation -> may throw OperationCanceledException]
-  PreparePath[Prepare target path (mkdir)]
+  PreparePath[Prepare target path]
   LargeFile?{Large file?}
   WaitSem[Wait for LargeFileSemaphore]
-  UpdateCurrent[Set CurrentSource/Target; NotifyProgress(force:true); small delay]
-  Copy[CopyFileAsync (streaming)]
-  DuringCopy[Decrease SizeRemaining; NotifyProgress(throttled)]
+  UpdateCurrent[Set CurrentSource/Target; NotifyProgress; small delay]
+  Copy[CopyFileAsync]
+  DuringCopy[Decrease SizeRemaining; NotifyProgress]
   Encrypt?{Requires encryption?}
-  CallEncrypt[EncryptionService.Encrypt(target, key)]
+  CallEncrypt[EncryptionService.Encrypt]
   EncryptFail[Delete target; Log error; State=Error; NotifyProgress; End loop]
-  AfterFile[FilesRemaining--; NotifyProgress(force:true); Release semaphore if acquired]
+  AfterFile[FilesRemaining--; NotifyProgress; Release semaphore if acquired]
   LoopEnd[End loop]
-  Complete[State = Completed; NotifyProgress(force:true)]
+  Complete[State = Completed; NotifyProgress]
 
   Start --> A --> B --> C
   C -- Yes --> C_yes --> End
@@ -51,3 +51,4 @@ flowchart TD
   LoopStart -->|Loop finished| LoopEnd --> Complete --> End
 
   style End fill:#f96
+```
